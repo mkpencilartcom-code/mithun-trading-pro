@@ -29,6 +29,8 @@ div[data-testid="stMetric"] { background: #131a28; border: 1px solid #1e2a3e; bo
 .green-box { background: #0e2318; border: 1px solid #00d084; border-radius: 14px; padding: 16px; text-align:center; font-weight:800; }
 .red-box { background: #231010; border: 1px solid #ff4d4d; border-radius: 14px; padding: 16px; text-align:center; font-weight:800; }
 h1, h2, h3 { color: white!important; }
+.sym-cell.hover-popup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:700px; background:#0e121b; border:3px solid #00d084; border-radius:18px; padding:12px; z-index:9999999; box-shadow:0 25px 100px rgba(0,0,0,0.95); }
+.sym-cell:hover.hover-popup { display:block!important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -71,7 +73,13 @@ def render_hover_table(df, sym_col="SYM"):
                 sym = str(val).replace(".NS","")
                 img = get_5m_base64(sym)
                 img_tag = f"<img src='{img}' style='width:100%; border-radius:12px;'>" if img else "<div style='color:white'>Loading...</div>"
-                row_html += f"""<td style='padding:10px; border-bottom:1px solid #1e2a3e;'><span style='font-weight:900; color:white;'>📈 {sym}</span></td>"""
+                row_html += f"""<td style='padding:10px; border-bottom:1px solid #1e2a3e; position:relative;' class='sym-cell'>
+                <span style='font-weight:900; color:white; cursor:pointer; text-decoration:underline; text-decoration-color:#00d084;'>📈 {sym}</span>
+                <div class='hover-popup'>
+                    <div style='color:#00d084; font-weight:900; text-align:center; margin-bottom:8px; font-size:16px;'>📈 {sym} - 5 MIN LIVE CHART</div>
+                    {img_tag}
+                </div>
+                </td>"""
             else:
                 row_html += f"<td style='padding:10px; border-bottom:1px solid #1e2a3e; color:#e6e8ec; font-size:13px;'>{val}</td>"
         rows_html += f"<tr style='background:#131a28;'>{row_html}</tr>"
@@ -215,36 +223,43 @@ elif menu == "📊 Sector + Heatmap (Only FNO)":
     if 'df_h' in st.session_state and not st.session_state['df_h'].empty:
         df_h = st.session_state['df_h']
 
-        # 1. HEATMAP - SIRF RED/GREEN
+        # 1. HEATMAP - ONLY RED GREEN
         st.subheader("Heatmap - Only Red & Green")
         fig_tree = px.treemap(df_h, path=['SECTOR','SYM'], values='SIZE', color='CHANGE',
-                              color_continuous_scale=[(0, "#d50000"), (0.5, "#1a1a1a"), (1, "#00c853")],
+                              color_continuous_scale=[(0, "#d50000"), (0.5, "#1e222d"), (1, "#00c853")],
                               color_continuous_midpoint=0, range_color=[-5,5])
         fig_tree.update_layout(height=650, template="plotly_dark")
         st.plotly_chart(fig_tree, use_container_width=True)
 
-        # 2. SECTOR BAR - SIRF RED/GREEN
-        st.subheader("Sector Performance - Green/Red Only")
+        # 2. SECTOR BAR - GREEN RED ONLY + AUTO CLICK
+        st.subheader("Sector Performance - Bar pe click karo, niche auto stock dikhenge")
         sec_perf = df_h.groupby("SECTOR")["CHANGE"].mean().reset_index().sort_values("CHANGE", ascending=False)
         colors = ['#00c853' if x>=0 else '#d50000' for x in sec_perf['CHANGE']]
         fig_bar = go.Figure(go.Bar(x=sec_perf['SECTOR'], y=sec_perf['CHANGE'], marker_color=colors,
                                    text=[f"{x:+.2f}%" for x in sec_perf['CHANGE']], textposition='outside'))
         fig_bar.update_layout(height=500, template="plotly_dark", yaxis_title="% Avg Change")
-        st.plotly_chart(fig_bar, use_container_width=True)
 
-        # 3. SECTOR PE CLICK = SARE STOCK DIKHE - NEW FEATURE
+        clicked = plotly_events(fig_bar, click_event=True, hover_event=False, override_height=500, override_width="100%")
+
+        selected_sector = None
+        if clicked:
+            try:
+                idx = clicked[0]['pointIndex']
+                selected_sector = sec_perf.iloc[idx]['SECTOR']
+                st.success(f"✅ Selected Sector: {selected_sector} - Click karte hi niche stock aa gaye")
+            except:
+                pass
+
         st.divider()
-        st.subheader("🔍 Sector pe click karke uske sare stock dekho")
-        selected_sector = st.selectbox("Sector select karo:", ["All"] + sorted(df_h["SECTOR"].unique().tolist()))
-        if selected_sector!= "All":
+        if selected_sector:
+            st.subheader(f"📋 {selected_sector} ke sare stocks")
             filtered = df_h[df_h["SECTOR"] == selected_sector].sort_values("CHANGE", ascending=False)
         else:
+            st.subheader("📋 Sabhi Stocks (Sector bar pe click karo filter ke liye)")
             filtered = df_h.sort_values("CHANGE", ascending=False)
 
-        st.dataframe(filtered[['SYM','SECTOR','LTP','CHANGE']].style.applymap(
-            lambda x: 'color: #00c853; font-weight:bold' if isinstance(x, (int,float)) and x>0 else 'color: #d50000; font-weight:bold' if isinstance(x, (int,float)) and x<0 else '',
-            subset=['CHANGE']
-        ), use_container_width=True, height=500)
+        # Hover table with chart
+        render_hover_table(filtered[['SYM','SECTOR','LTP','CHANGE']].sort_values("CHANGE", ascending=False), "SYM")
 
     else:
         st.info("👆 Pehle 'GENERATE NSE HEATMAP' dabao")
@@ -256,8 +271,8 @@ elif menu == "📰 NEWS Terminal - 87 Sources":
     total = sum(len(v) for v in news_data.values())
     st.success(f"Live • {total} headlines • {datetime.now(IST).strftime('%H:%M:%S')} IST")
 
-    # AB 6 ki jagah 3 COLUMN - BADA DIKHEGA
     cats = list(RSS_FEEDS.keys())
+    # 3 column me bada
     for i in range(0, len(cats), 3):
         cols = st.columns(3)
         for j in range(3):
@@ -266,9 +281,10 @@ elif menu == "📰 NEWS Terminal - 87 Sources":
                 with cols[j]:
                     st.markdown(f"### {cat}")
                     lst = news_data.get(cat, [])
-                    with st.container(border=True, height=800):
-                        for n in lst[:15]:
+                    with st.container(border=True, height=850):
+                        for n in lst[:20]:
                             st.caption(f"{n['TIME']} | {n['SRC']}")
                             st.markdown(f"**[{n['TITLE']}]({n['LINK']})**")
                             st.divider()
-    time.sleep(120); st.rerun()
+    time.sleep(120)
+    st.rerun()
