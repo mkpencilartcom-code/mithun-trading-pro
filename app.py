@@ -71,24 +71,11 @@ def render_hover_table(df, sym_col="SYM"):
                 sym = str(val).replace(".NS","")
                 img = get_5m_base64(sym)
                 img_tag = f"<img src='{img}' style='width:100%; border-radius:12px;'>" if img else "<div style='color:white'>Loading...</div>"
-                row_html += f"""<td style='padding:10px; border-bottom:1px solid #1e2a3e; position:relative;' class='sym-cell'>
-                <span style='font-weight:900; color:white; cursor:pointer; text-decoration:underline; text-decoration-color:#00d084;'>📈 {sym}</span>
-                <div class='hover-popup'>
-                    <div style='color:#00d084; font-weight:900; text-align:center; margin-bottom:8px; font-size:16px;'>📈 {sym} - 5 MIN LIVE CHART</div>
-                    {img_tag}
-                </div>
-                </td>"""
+                row_html += f"""<td style='padding:10px; border-bottom:1px solid #1e2a3e;'><span style='font-weight:900; color:white;'>📈 {sym}</span></td>"""
             else:
                 row_html += f"<td style='padding:10px; border-bottom:1px solid #1e2a3e; color:#e6e8ec; font-size:13px;'>{val}</td>"
-        rows_html += f"<tr style='background:#131a28;' onmouseover=\"this.style.background='#1a2438'\" onmouseout=\"this.style.background='#131a28'\">{row_html}</tr>"
-    full_html = f"""
-    <html><head><style>
-    body {{ background:#0e121b; margin:0; font-family: sans-serif; }}
-    table {{ width:100%; border-collapse:collapse; }}
-   .sym-cell.hover-popup {{ display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:700px; background:#0e121b; border:3px solid #00d084; border-radius:18px; padding:12px; z-index:9999999; box-shadow:0 25px 100px rgba(0,0,0,0.95); }}
-   .sym-cell:hover.hover-popup {{ display:block!important; }}
-    </style></head><body><table><tr>{header_html}</tr>{rows_html}</table></body></html>
-    """
+        rows_html += f"<tr style='background:#131a28;'>{row_html}</tr>"
+    full_html = f"<html><body style='background:#0e121b; margin:0;'><table style='width:100%; border-collapse:collapse;'><tr>{header_html}</tr>{rows_html}</table></body></html>"
     h = 80 + len(df)*42
     h = min(h, 600)
     components.html(full_html, height=h, scrolling=True)
@@ -170,60 +157,12 @@ with st.sidebar:
     st.markdown("## 🔷 TradingPro")
     st.markdown("<span style='color:#00d084; font-size:20px; font-weight:900'>● PREMIUM</span> <span style='background:#00d084;color:#000;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:900'>PRO PLAN • ACTIVE</span>", unsafe_allow_html=True)
     st.write("")
-    # === CANDLE CHART CONTROLS - NEW ===
-    st.markdown("### 📈 Chart Stock")
-    chart_sym = st.text_input("Candle ke liye Symbol", value="RELIANCE")
-    chart_period = st.selectbox("Period", ["1d","5d","1mo","3mo","6mo","1y"], index=2)
-    chart_interval = st.selectbox("Interval", ["1m","5m","15m","1h","1d"], index=4)
-    st.divider()
     menu = st.radio("Navigation", ["📊 Dashboard - All in One","📈 FNO - 1% Low UP + High DOWN","🔍 CASH - 2.5% (EQUITY_L.csv)","📊 Sector + Heatmap (Only FNO)","📰 NEWS Terminal - 87 Sources"], label_visibility="collapsed")
     st.divider()
     st.caption(f"📅 {datetime.now(IST).strftime('%d %b %Y %I:%M %p')} IST")
 
-# =========== CANDLE HELPER ===========
-@st.cache_data(ttl=120)
-def get_candle_df(sym, per, inter):
-    try:
-        df = yf.Ticker(f"{sym}.NS").history(period=per, interval=inter, auto_adjust=True)
-        return df
-    except:
-        return pd.DataFrame()
-
-def show_big_candle(symbol, period, interval):
-    df = get_candle_df(symbol, period, interval)
-    if df.empty:
-        st.warning(f"{symbol} ka data nahi mila")
-        return
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
-    fig = go.Figure()
-    fig.add_trace(go.Candlestick(
-        x=df.index,
-        open=df['Open'],
-        high=df['High'],
-        low=df['Low'],
-        close=df['Close'],
-        increasing_line_color='#00d084',
-        decreasing_line_color='#ff4d4d',
-        name=symbol
-    ))
-    # MA20
-    df['MA20'] = df['Close'].rolling(20).mean()
-    fig.add_trace(go.Scatter(x=df.index, y=df['MA20'], line=dict(color='orange', width=1.2), name='MA20'))
-    fig.update_layout(
-        height=650,
-        xaxis_rangeslider_visible=False,
-        template="plotly_dark",
-        margin=dict(l=10,r=10,t=30,b=10),
-        title=f"{symbol}.NS - {period} / {interval} - CANDLE (Big)",
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
 if menu == "📊 Dashboard - All in One":
     st.title("📊 TradingPro - All in One Dashboard")
-    # BIG CANDLE CHART FIXED HERE
-    show_big_candle(chart_sym, chart_period, chart_interval)
-    st.divider()
     if st.button("🚀 FULL SCAN KARO - FNO + CASH", type="primary", use_container_width=True):
         df_u, df_d, last_dt = scan_fno()
         st.info(f"FNO Last Trading Date: {last_dt}")
@@ -239,7 +178,6 @@ if menu == "📊 Dashboard - All in One":
 
 elif menu == "📈 FNO - 1% Low UP + High DOWN":
     st.title("📈 FNO - 1% Low UP + High DOWN")
-    show_big_candle(chart_sym, chart_period, chart_interval)
     if st.button("🚀 SCAN FNO - LOW 1% + HIGH 1%", type="primary", use_container_width=True):
         df_u, df_d, last_dt = scan_fno()
         st.info(f"Last Trading Date: {last_dt}")
@@ -249,7 +187,6 @@ elif menu == "📈 FNO - 1% Low UP + High DOWN":
 
 elif menu == "🔍 CASH - 2.5% (EQUITY_L.csv)":
     st.title("🔍 CASH Screener - 2.5% UP / 3% DOWN")
-    show_big_candle(chart_sym, chart_period, chart_interval)
     if st.button("🚀 SCAN FULL CASH", type="primary", use_container_width=True):
         df_u, df_d, last_dt = scan_cash_full(); st.info(f"Last Trading Date: {last_dt}")
         c1,c2 = st.columns(2)
@@ -274,39 +211,64 @@ elif menu == "📊 Sector + Heatmap (Only FNO)":
                 bar.progress((i+1)/len(FNO))
             bar.empty()
             st.session_state['df_h'] = pd.DataFrame(heat_data)
+
     if 'df_h' in st.session_state and not st.session_state['df_h'].empty:
         df_h = st.session_state['df_h']
-        # TREEMAP
-        st.plotly_chart(px.treemap(df_h, path=['SECTOR','SYM'], values='SIZE', color='CHANGE', color_continuous_scale='RdYlGn', color_continuous_midpoint=0), use_container_width=True)
-        # === GREEN RED SECTOR BAR CHART - FIXED ===
-        st.subheader("Sector Performance - Green/Red")
+
+        # 1. HEATMAP - SIRF RED/GREEN
+        st.subheader("Heatmap - Only Red & Green")
+        fig_tree = px.treemap(df_h, path=['SECTOR','SYM'], values='SIZE', color='CHANGE',
+                              color_continuous_scale=[(0, "#d50000"), (0.5, "#1a1a1a"), (1, "#00c853")],
+                              color_continuous_midpoint=0, range_color=[-5,5])
+        fig_tree.update_layout(height=650, template="plotly_dark")
+        st.plotly_chart(fig_tree, use_container_width=True)
+
+        # 2. SECTOR BAR - SIRF RED/GREEN
+        st.subheader("Sector Performance - Green/Red Only")
         sec_perf = df_h.groupby("SECTOR")["CHANGE"].mean().reset_index().sort_values("CHANGE", ascending=False)
         colors = ['#00c853' if x>=0 else '#d50000' for x in sec_perf['CHANGE']]
-        fig_bar = go.Figure(go.Bar(
-            x=sec_perf['SECTOR'],
-            y=sec_perf['CHANGE'],
-            marker_color=colors,
-            text=[f"{x:+.2f}%" for x in sec_perf['CHANGE']],
-            textposition='outside'
-        ))
+        fig_bar = go.Figure(go.Bar(x=sec_perf['SECTOR'], y=sec_perf['CHANGE'], marker_color=colors,
+                                   text=[f"{x:+.2f}%" for x in sec_perf['CHANGE']], textposition='outside'))
         fig_bar.update_layout(height=500, template="plotly_dark", yaxis_title="% Avg Change")
         st.plotly_chart(fig_bar, use_container_width=True)
+
+        # 3. SECTOR PE CLICK = SARE STOCK DIKHE - NEW FEATURE
+        st.divider()
+        st.subheader("🔍 Sector pe click karke uske sare stock dekho")
+        selected_sector = st.selectbox("Sector select karo:", ["All"] + sorted(df_h["SECTOR"].unique().tolist()))
+        if selected_sector!= "All":
+            filtered = df_h[df_h["SECTOR"] == selected_sector].sort_values("CHANGE", ascending=False)
+        else:
+            filtered = df_h.sort_values("CHANGE", ascending=False)
+
+        st.dataframe(filtered[['SYM','SECTOR','LTP','CHANGE']].style.applymap(
+            lambda x: 'color: #00c853; font-weight:bold' if isinstance(x, (int,float)) and x>0 else 'color: #d50000; font-weight:bold' if isinstance(x, (int,float)) and x<0 else '',
+            subset=['CHANGE']
+        ), use_container_width=True, height=500)
+
     else:
         st.info("👆 Pehle 'GENERATE NSE HEATMAP' dabao")
 
 elif menu == "📰 NEWS Terminal - 87 Sources":
     st.title("📰 LIVE NEWS TERMINAL - 87 Sources")
     if st.button("🔄 REFRESH NEWS", type="primary"): st.cache_data.clear()
-    news_data = fetch_news(); total = sum(len(v) for v in news_data.values())
+    news_data = fetch_news()
+    total = sum(len(v) for v in news_data.values())
     st.success(f"Live • {total} headlines • {datetime.now(IST).strftime('%H:%M:%S')} IST")
-    cols = st.columns(6)
-    for i, cat in enumerate(RSS_FEEDS.keys()):
-        with cols[i]:
-            st.markdown(f"### {cat}")
-            lst = news_data.get(cat, [])
-            with st.container(border=True, height=700):
-                for n in lst:
-                    st.caption(f"{n['TIME']} | {n['SRC']}")
-                    st.markdown(f"[{n['TITLE']}]({n['LINK']})")
-                    st.divider()
+
+    # AB 6 ki jagah 3 COLUMN - BADA DIKHEGA
+    cats = list(RSS_FEEDS.keys())
+    for i in range(0, len(cats), 3):
+        cols = st.columns(3)
+        for j in range(3):
+            if i+j < len(cats):
+                cat = cats[i+j]
+                with cols[j]:
+                    st.markdown(f"### {cat}")
+                    lst = news_data.get(cat, [])
+                    with st.container(border=True, height=800):
+                        for n in lst[:15]:
+                            st.caption(f"{n['TIME']} | {n['SRC']}")
+                            st.markdown(f"**[{n['TITLE']}]({n['LINK']})**")
+                            st.divider()
     time.sleep(120); st.rerun()
