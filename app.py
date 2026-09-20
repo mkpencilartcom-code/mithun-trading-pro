@@ -8,6 +8,7 @@ from datetime import datetime
 import pytz
 import time
 import plotly.express as px
+import plotly.graph_objects as go
 from streamlit_plotly_events import plotly_events
 import matplotlib
 matplotlib.use('Agg')
@@ -169,12 +170,60 @@ with st.sidebar:
     st.markdown("## 🔷 TradingPro")
     st.markdown("<span style='color:#00d084; font-size:20px; font-weight:900'>● PREMIUM</span> <span style='background:#00d084;color:#000;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:900'>PRO PLAN • ACTIVE</span>", unsafe_allow_html=True)
     st.write("")
+    # === CANDLE CHART CONTROLS - NEW ===
+    st.markdown("### 📈 Chart Stock")
+    chart_sym = st.text_input("Candle ke liye Symbol", value="RELIANCE")
+    chart_period = st.selectbox("Period", ["1d","5d","1mo","3mo","6mo","1y"], index=2)
+    chart_interval = st.selectbox("Interval", ["1m","5m","15m","1h","1d"], index=4)
+    st.divider()
     menu = st.radio("Navigation", ["📊 Dashboard - All in One","📈 FNO - 1% Low UP + High DOWN","🔍 CASH - 2.5% (EQUITY_L.csv)","📊 Sector + Heatmap (Only FNO)","📰 NEWS Terminal - 87 Sources"], label_visibility="collapsed")
     st.divider()
     st.caption(f"📅 {datetime.now(IST).strftime('%d %b %Y %I:%M %p')} IST")
 
+# =========== CANDLE HELPER ===========
+@st.cache_data(ttl=120)
+def get_candle_df(sym, per, inter):
+    try:
+        df = yf.Ticker(f"{sym}.NS").history(period=per, interval=inter, auto_adjust=True)
+        return df
+    except:
+        return pd.DataFrame()
+
+def show_big_candle(symbol, period, interval):
+    df = get_candle_df(symbol, period, interval)
+    if df.empty:
+        st.warning(f"{symbol} ka data nahi mila")
+        return
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+    fig = go.Figure()
+    fig.add_trace(go.Candlestick(
+        x=df.index,
+        open=df['Open'],
+        high=df['High'],
+        low=df['Low'],
+        close=df['Close'],
+        increasing_line_color='#00d084',
+        decreasing_line_color='#ff4d4d',
+        name=symbol
+    ))
+    # MA20
+    df['MA20'] = df['Close'].rolling(20).mean()
+    fig.add_trace(go.Scatter(x=df.index, y=df['MA20'], line=dict(color='orange', width=1.2), name='MA20'))
+    fig.update_layout(
+        height=650,
+        xaxis_rangeslider_visible=False,
+        template="plotly_dark",
+        margin=dict(l=10,r=10,t=30,b=10),
+        title=f"{symbol}.NS - {period} / {interval} - CANDLE (Big)",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
 if menu == "📊 Dashboard - All in One":
     st.title("📊 TradingPro - All in One Dashboard")
+    # BIG CANDLE CHART FIXED HERE
+    show_big_candle(chart_sym, chart_period, chart_interval)
+    st.divider()
     if st.button("🚀 FULL SCAN KARO - FNO + CASH", type="primary", use_container_width=True):
         df_u, df_d, last_dt = scan_fno()
         st.info(f"FNO Last Trading Date: {last_dt}")
@@ -187,21 +236,26 @@ if menu == "📊 Dashboard - All in One":
         c3,c4 = st.columns(2)
         with c3: st.markdown(f"<div class='green-box'>↗ CASH LOW 2.5% UP: {len(df_cu)}</div>", unsafe_allow_html=True); render_hover_table(df_cu.sort_values("LOW_UP %", ascending=False) if not df_cu.empty else df_cu, "SYMBOL")
         with c4: st.markdown(f"<div class='red-box'>↘ CASH HIGH 3% DOWN: {len(df_cd)}</div>", unsafe_allow_html=True); render_hover_table(df_cd.sort_values("HIGH_DOWN %", ascending=False) if not df_cd.empty else df_cd, "SYMBOL")
+
 elif menu == "📈 FNO - 1% Low UP + High DOWN":
     st.title("📈 FNO - 1% Low UP + High DOWN")
+    show_big_candle(chart_sym, chart_period, chart_interval)
     if st.button("🚀 SCAN FNO - LOW 1% + HIGH 1%", type="primary", use_container_width=True):
         df_u, df_d, last_dt = scan_fno()
         st.info(f"Last Trading Date: {last_dt}")
         c1,c2 = st.columns(2)
         with c1: st.markdown(f"<div class='green-box'>↗ LOW se 1% UP: {len(df_u)}</div>", unsafe_allow_html=True); render_hover_table(df_u.sort_values("LOW_UP %", ascending=False) if not df_u.empty else df_u, "SYM")
         with c2: st.markdown(f"<div class='red-box'>↘ HIGH se 1% DOWN: {len(df_d)}</div>", unsafe_allow_html=True); render_hover_table(df_d.sort_values("HIGH_DOWN %", ascending=False) if not df_d.empty else df_d, "SYM")
+
 elif menu == "🔍 CASH - 2.5% (EQUITY_L.csv)":
     st.title("🔍 CASH Screener - 2.5% UP / 3% DOWN")
+    show_big_candle(chart_sym, chart_period, chart_interval)
     if st.button("🚀 SCAN FULL CASH", type="primary", use_container_width=True):
         df_u, df_d, last_dt = scan_cash_full(); st.info(f"Last Trading Date: {last_dt}")
         c1,c2 = st.columns(2)
         with c1: st.success(f"LOW 2.5% UP: {len(df_u)}"); render_hover_table(df_u.sort_values("LOW_UP %", ascending=False) if not df_u.empty else df_u, "SYMBOL")
         with c2: st.error(f"HIGH 3% DOWN: {len(df_d)}"); render_hover_table(df_d.sort_values("HIGH_DOWN %", ascending=False) if not df_d.empty else df_d, "SYMBOL")
+
 elif menu == "📊 Sector + Heatmap (Only FNO)":
     st.title("📊 Heatmap + Sector Performance")
     if st.button("🔥 GENERATE NSE HEATMAP & SECTOR CHART", type="primary", use_container_width=True):
@@ -222,9 +276,24 @@ elif menu == "📊 Sector + Heatmap (Only FNO)":
             st.session_state['df_h'] = pd.DataFrame(heat_data)
     if 'df_h' in st.session_state and not st.session_state['df_h'].empty:
         df_h = st.session_state['df_h']
-        st.plotly_chart(px.treemap(df_h, path=['SECTOR','SYM'], values='SIZE', color='CHANGE', color_continuous_scale='RdYlGn'), use_container_width=True)
+        # TREEMAP
+        st.plotly_chart(px.treemap(df_h, path=['SECTOR','SYM'], values='SIZE', color='CHANGE', color_continuous_scale='RdYlGn', color_continuous_midpoint=0), use_container_width=True)
+        # === GREEN RED SECTOR BAR CHART - FIXED ===
+        st.subheader("Sector Performance - Green/Red")
+        sec_perf = df_h.groupby("SECTOR")["CHANGE"].mean().reset_index().sort_values("CHANGE", ascending=False)
+        colors = ['#00c853' if x>=0 else '#d50000' for x in sec_perf['CHANGE']]
+        fig_bar = go.Figure(go.Bar(
+            x=sec_perf['SECTOR'],
+            y=sec_perf['CHANGE'],
+            marker_color=colors,
+            text=[f"{x:+.2f}%" for x in sec_perf['CHANGE']],
+            textposition='outside'
+        ))
+        fig_bar.update_layout(height=500, template="plotly_dark", yaxis_title="% Avg Change")
+        st.plotly_chart(fig_bar, use_container_width=True)
     else:
         st.info("👆 Pehle 'GENERATE NSE HEATMAP' dabao")
+
 elif menu == "📰 NEWS Terminal - 87 Sources":
     st.title("📰 LIVE NEWS TERMINAL - 87 Sources")
     if st.button("🔄 REFRESH NEWS", type="primary"): st.cache_data.clear()
