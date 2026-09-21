@@ -45,7 +45,6 @@ def draw_half_chart(symbol, pct_info=""):
         if df.empty:
             st.error(f"{symbol} no data"); return
         df = df.tail(80)
-        # HALF SIZE - pehle 22,12 tha, ab 11,5.5
         fig, ax = plt.subplots(figsize=(11, 5.5), facecolor='#0e121b')
         ax.set_facecolor('#0e121b')
         for i in range(len(df)):
@@ -117,8 +116,6 @@ if menu == "📈 FNO - HALF CHART SIDE-BY-SIDE":
     if st.button("🚀 SCAN FNO", type="primary", use_container_width=True):
         df_u, df_d, last_dt = scan_fno()
         st.info(f"Last Date: {last_dt} | BOX hata diya, niche aadhe size ke charts dono taraf")
-
-        # Upar sirf table - BOX nahi
         c1,c2 = st.columns(2)
         with c1:
             st.markdown(f"<div class='green-box'>↗ LOW se 1% UP: {len(df_u)}</div>", unsafe_allow_html=True)
@@ -126,15 +123,10 @@ if menu == "📈 FNO - HALF CHART SIDE-BY-SIDE":
         with c2:
             st.markdown(f"<div class='red-box'>↘ HIGH se 1% DOWN: {len(df_d)}</div>", unsafe_allow_html=True)
             st.dataframe(df_d.sort_values("HIGH_DOWN %", ascending=False) if not df_d.empty else df_d, use_container_width=True, height=400)
-
         st.divider()
         st.subheader("📊 Aadhe size charts - Left me LOW UP, Right me HIGH DOWN")
-
-        # Dono ka chart ek saath
-        col_left, col_right = st.columns(2)
         up_syms = df_u.sort_values("LOW_UP %", ascending=False)['SYM'].tolist() if not df_u.empty else []
         down_syms = df_d.sort_values("HIGH_DOWN %", ascending=False)['SYM'].tolist() if not df_d.empty else []
-
         max_len = max(len(up_syms), len(down_syms))
         for i in range(max_len):
             cl, cr = st.columns(2)
@@ -167,7 +159,7 @@ elif menu == "📋 CUSTOM LIST + HALF CHARTS":
                     draw_half_chart(sym)
 
 elif menu == "📊 Sector Heatmap":
-    st.title("📊 Sector Heatmap")
+    st.title("📊 Sector Heatmap - Click Wala")
     if st.button("🔥 GENERATE", type="primary", use_container_width=True):
         heat_data=[]
         bar=st.progress(0)
@@ -182,12 +174,33 @@ elif menu == "📊 Sector Heatmap":
             bar.progress((i+1)/len(FNO))
         bar.empty()
         st.session_state['df_h']=pd.DataFrame(heat_data)
+        st.session_state['selected_sector']=None
+
     if 'df_h' in st.session_state and not st.session_state['df_h'].empty:
         df_h=st.session_state['df_h']
         sec_perf=df_h.groupby('SECTOR')['CHANGE'].mean().reset_index().sort_values('CHANGE',ascending=False)
-        fig_bar=px.bar(sec_perf,x='SECTOR',y='CHANGE',color='CHANGE',color_continuous_scale=[(0,"#d50000"),(0.5,"#1e222d"),(1,"#00c853")],range_color=[-3,3])
-        fig_bar.update_layout(paper_bgcolor="#0e121b",plot_bgcolor="#0e121b",font=dict(color="white"),height=500)
-        st.plotly_chart(fig_bar, use_container_width=True)
+
+        fig_bar=px.bar(sec_perf,x='SECTOR',y='CHANGE',color='CHANGE',
+                       color_continuous_scale=[(0,"#d50000"),(0.5,"#1e222d"),(1,"#00c853")],
+                       text=sec_perf['CHANGE'].round(2).astype(str)+'%',
+                       range_color=[-3,3])
+        fig_bar.update_layout(paper_bgcolor="#0e121b",plot_bgcolor="#0e121b",font=dict(color="white"),height=500,showlegend=False,coloraxis_showscale=False)
+        fig_bar.update_traces(textposition='outside')
+
+        # SIRF YE CLICK WALA PART JODA HAI - BAAKI SAME
+        st.markdown("### 👇 Sector bar pe click karo, niche stocks ayenge")
+        clicked = plotly_events(fig_bar, click_event=True, hover_event=False, override_height=500, override_width="100%")
+        if clicked:
+            st.session_state['selected_sector'] = clicked[0]['x']
+            st.toast(f"Selected: {clicked[0]['x']}")
+
+        if st.session_state.get('selected_sector'):
+            sel = st.session_state['selected_sector']
+            sdf = df_h[df_h['SECTOR']==sel].sort_values('CHANGE',ascending=False)
+            st.success(f"👉 {sel} Sector - {len(sdf)} Stocks (Click se aaya)")
+            st.dataframe(sdf, use_container_width=True, height=400)
+
+        st.divider()
         fig_tree = px.treemap(df_h, path=[px.Constant("NSE FNO"), 'SECTOR', 'SYM'], values='SIZE', color='CHANGE', color_continuous_scale=[(0, "#d50000"), (0.5, "#1e222d"), (1, "#00c853")], range_color=[-3, 3])
         fig_tree.update_layout(margin=dict(t=10,l=10,r=10,b=10), paper_bgcolor="#0e121b", height=700)
         st.plotly_chart(fig_tree, use_container_width=True)
