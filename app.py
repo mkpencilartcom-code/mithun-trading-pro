@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.patches import Rectangle
 
-st.set_page_config(page_title="TradingPro FINAL - HALF CHART", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="TradingPro FINAL ALL", layout="wide", initial_sidebar_state="expanded")
 IST = pytz.timezone('Asia/Kolkata')
 
 st.markdown("""
@@ -42,10 +42,8 @@ def draw_half_chart(symbol, pct_info=""):
             except: pass
         if df.empty or len(df) < 10:
             df = yf.Ticker(f"{symbol}.NS").history(period="5d", interval="15m", auto_adjust=True)
-        if df.empty:
-            st.error(f"{symbol} no data"); return
+        if df.empty: return
         df = df.tail(80)
-        # HALF SIZE - pehle 22,12 tha, ab 11,5.5
         fig, ax = plt.subplots(figsize=(11, 5.5), facecolor='#0e121b')
         ax.set_facecolor('#0e121b')
         for i in range(len(df)):
@@ -57,7 +55,7 @@ def draw_half_chart(symbol, pct_info=""):
             if bh < (h-l)*0.1: bh = (h-l)*0.1
             rect = Rectangle((x-0.0007, min(o,c)), 0.0014, bh, facecolor=col, edgecolor=col)
             ax.add_patch(rect)
-        ax.set_title(f"{symbol} {pct_info} - 5MIN", color='#00d084', fontsize=14, fontweight='bold', pad=10)
+        ax.set_title(f"{symbol} {pct_info} - 5MIN", color='#00d084', fontsize=14, fontweight='bold')
         ax.tick_params(colors='#aaa', labelsize=9)
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
         for spine in ax.spines.values(): spine.set_color('#1e2a3e')
@@ -66,8 +64,7 @@ def draw_half_chart(symbol, pct_info=""):
         plt.tight_layout()
         st.pyplot(fig, use_container_width=True)
         plt.close(fig)
-    except Exception as e:
-        st.error(f"{symbol}: {e}")
+    except: pass
 
 FNO = ["360ONE","ABB","APLAPOLLO","AUBANK","ADANIENSOL","ADANIENT","ADANIGREEN","ADANIPORTS","ADANIPOWER","ABCAPITAL","ALKEM","AMBER","AMBUJACEM","ANGELONE","APOLLOHOSP","ASHOKLEY","ASIANPAINT","ASTRAL","ATHERENERG","AUROPHARMA","DMART","AXISBANK","BSE","BAJAJ-AUTO","BAJFINANCE","BAJAJFINSV","BAJAJHLDNG","BANDHANBNK","BANKBARODA","BANKINDIA","MAHABANK","BDL","BEL","BHARATFORG","BHEL","BPCL","BHARTIARTL","BIOCON","BLUESTARCO","BOSCHLTD","BRITANNIA","CGPOWER","CANBK","CDSL","CHOLAFIN","CIPLA","COALINDIA","COCHINSHIP","COFORGE","COLPAL","CAMS","CONCOR","CROMPTON","CUMMINSIND","DLF","DABUR","DELHIVERY","DIVISLAB","DIXON","DRREDDY","ETERNAL","EICHERMOT","FORCEMOT","NYKAA","FORTIS","GAIL","GVT&D","GMRAIRPORT","GLENMARK","GODFRYPHLP","GODREJCP","GODREJPROP","GRASIM","HCLTECH","HDFCAMC","HDFCBANK","HDFCLIFE","HAVELLS","HEROMOTOCO","HINDALCO","HAL","HINDPETRO","HINDUNILVR","HINDZINC","POWERINDIA","HYUNDAI","ICICIBANK","ICICIGI","ICICIPRULI","IDFCFIRSTB","ITC","INDIANB","IEX","IOC","IRFC","IREDA","INDUSTOWER","INDUSINDBK","NAUKRI","INFY","INOXWIND","INDIGO","JINDALSTEL","JSWENERGY","JSWSTEEL","JIOFIN","JUBLFOOD","KEI","KPITTECH","KALYANKJIL","KAYNES","KFINTECH","KOTAKBANK","LTF","LICHSGFIN","LTM","LT","LAURUSLABS","LICI","LODHA","LUPIN","M&M","MANAPPURAM","MANKIND","MARICO","MARUTI","MFSL","MAXHEALTH","MAZDOCK","MOTILALOFS","MPHASIS","MCX","MUTHOOTFIN","NBCC","NHPC","NMDC","NTPC","NATIONALUM","NESTLEIND","NAM-INDIA","OBEROIRLTY","ONGC","OIL","PAYTM","OFSS","POLICYBZR","PGEL","PIIND","PNBHOUSING","PAGEIND","PATANJALI","PERSISTENT","PETRONET","PIDILITIND","POLYCAB","PFC","POWERGRID","PREMIERENE","PRESTIGE","PNB","RBLBANK","RECLTD","RADICO","RVNL","RELIANCE","SAGILITY","SBICARD","SBILIFE","SHREECEM","SRF","MOTHERSON","SHRIRAMFIN","SIEMENS","SOLARINDS","SONACOMS","SBIN","SAIL","SUNPHARMA","SUPREMEIND","SUZLON","SWIGGY","TATACONSUM","TVSMOTOR","TCS","TATAELXSI","TMPV","TATAPOWER","TATASTEEL","TECHM","FEDERALBNK","INDHOTEL","PHOENIXLTD","TITAN","TORNTPHARM","TRENT","TIINDIA","UNOMINDA","UPL","ULTRACEMCO","UNIONBANK","UNITDSPR","VBL","VEDL","VMM","IDEA","VOLTAS","WAAREEENER","WIPRO","YESBANK","ZYDUSLIFE"]
 SECTOR_MAP_FULL = {"HDFCBANK":"Banking","ICICIBANK":"Banking","SBIN":"Banking","AXISBANK":"Banking","KOTAKBANK":"Banking","INDUSINDBK":"Banking","BANDHANBNK":"Banking","BANKBARODA":"Banking","BANKINDIA":"Banking","FEDERALBNK":"Banking","IDFCFIRSTB":"Banking","RBLBANK":"Banking","PNB":"Banking","INDIANB":"Banking","CANBK":"Banking","UNIONBANK":"Banking","MAHABANK":"Banking","YESBANK":"Banking","BAJFINANCE":"Finance","BAJAJFINSV":"Finance","SBILIFE":"Finance","HDFCLIFE":"Finance","ICICIPRULI":"Finance","ICICIGI":"Finance","SBICARD":"Finance","CHOLAFIN":"Finance","MUTHOOTFIN":"Finance","SHRIRAMFIN":"Finance","LICHSGFIN":"Finance","LTF":"Finance","RECLTD":"Finance","PFC":"Finance","BSE":"Finance","CDSL":"Finance","CAMS":"Finance","KFINTECH":"Finance","JIOFIN":"Finance","ABCAPITAL":"Finance","360ONE":"Finance","ANGELONE":"Finance","MOTILALOFS":"Finance","MANAPPURAM":"Finance","PNBHOUSING":"Finance","NAM-INDIA":"Finance","HDFCAMC":"Finance","MCX":"Finance","RELIANCE":"Energy","ONGC":"Energy","BPCL":"Energy","IOC":"Energy","HINDPETRO":"Energy","GAIL":"Energy","OIL":"Energy","NTPC":"Energy","POWERGRID":"Energy","JSWENERGY":"Energy","ADANIPOWER":"Energy","ADANIGREEN":"Energy","TATAPOWER":"Energy","NHPC":"Energy","ADANIENSOL":"Energy","INFY":"IT","TCS":"IT","HCLTECH":"IT","WIPRO":"IT","TECHM":"IT","COFORGE":"IT","MPHASIS":"IT","PERSISTENT":"IT","LTM":"IT","KPITTECH":"IT","OFSS":"IT","MARUTI":"Auto","M&M":"Auto","TMPV":"Auto","BAJAJ-AUTO":"Auto","EICHERMOT":"Auto","TVSMOTOR":"Auto","ASHOKLEY":"Auto","BHARATFORG":"Auto","BOSCHLTD":"Auto","MOTHERSON":"Auto","UNOMINDA":"Auto","SONACOMS":"Auto","TIINDIA":"Auto","SUNPHARMA":"Pharma","DRREDDY":"Pharma","CIPLA":"Pharma","DIVISLAB":"Pharma","LUPIN":"Pharma","AUROPHARMA":"Pharma","ALKEM":"Pharma","TORNTPHARM":"Pharma","ZYDUSLIFE":"Pharma","LAURUSLABS":"Pharma","BIOCON":"Pharma","MANKIND":"Pharma","ITC":"FMCG","HINDUNILVR":"FMCG","NESTLEIND":"FMCG","BRITANNIA":"FMCG","TATACONSUM":"FMCG","DABUR":"FMCG","GODREJCP":"FMCG","MARICO":"FMCG","COLPAL":"FMCG","VBL":"FMCG","GODFRYPHLP":"FMCG","RADICO":"FMCG","UNITDSPR":"FMCG","LT":"Capital Goods","BEL":"Capital Goods","BHEL":"Capital Goods","SIEMENS":"Capital Goods","ABB":"Capital Goods","CGPOWER":"Capital Goods","CUMMINSIND":"Capital Goods","POLYCAB":"Capital Goods","KEI":"Capital Goods","HAVELLS":"Capital Goods","POWERINDIA":"Capital Goods","GVT&D":"Capital Goods","VOLTAS":"Capital Goods","CROMPTON":"Capital Goods","BLUESTARCO":"Capital Goods","ASTRAL":"Capital Goods","DIXON":"Capital Goods","KAYNES":"Capital Goods","AMBER":"Capital Goods","PGEL":"Capital Goods","BDL":"Capital Goods","HAL":"Capital Goods","MAZDOCK":"Capital Goods","COCHINSHIP":"Capital Goods","JSWSTEEL":"Metals","TATASTEEL":"Metals","HINDALCO":"Metals","VEDL":"Metals","NMDC":"Metals","SAIL":"Metals","JINDALSTEL":"Metals","HINDZINC":"Metals","NATIONALUM":"Metals","ULTRACEMCO":"Cement","SHREECEM":"Cement","AMBUJACEM":"Cement","GRASIM":"Cement","DLF":"Realty","GODREJPROP":"Realty","OBEROIRLTY":"Realty","LODHA":"Realty","PRESTIGE":"Realty","PHOENIXLTD":"Realty","ADANIENT":"Adani","ADANIPORTS":"Adani","GMRAIRPORT":"Adani"}
@@ -76,7 +73,7 @@ RSS_FEEDS = {"🇮🇳 INDIA MARKET (22)": {"MoneyControl Top": "https://www.mon
 
 def scan_fno():
     up, down = [], []; last_date = None
-    bar = st.progress(0, text="Scanning FNO...")
+    bar = st.progress(0, text="Scanning FNO 200...")
     for i, sym in enumerate(FNO):
         try:
             d = yf.Ticker(f"{sym}.NS").history(period="5d", auto_adjust=True)
@@ -109,16 +106,14 @@ def fetch_news():
 
 with st.sidebar:
     st.markdown("## 🔷 TradingPro")
-    menu = st.radio("Navigation", ["📈 FNO - HALF CHART SIDE-BY-SIDE","📋 CUSTOM LIST + HALF CHARTS","📊 Sector Heatmap","📰 NEWS - 87 Sources"], label_visibility="collapsed")
+    menu = st.radio("Navigation", ["📈 FNO - HALF CHART SIDE-BY-SIDE","📋 CUSTOM LIST + HALF CHARTS","📊 Sector Heatmap - Click Wala","📰 NEWS Terminal - 87 Sources"], label_visibility="collapsed")
     st.caption(f"📅 {datetime.now(IST).strftime('%d %b %Y %I:%M %p')} IST")
 
 if menu == "📈 FNO - HALF CHART SIDE-BY-SIDE":
-    st.title("📈 FNO - Aadhe Charts - Side by Side")
+    st.title("📈 FNO - Aadhe Charts - Dono Side Me")
     if st.button("🚀 SCAN FNO", type="primary", use_container_width=True):
         df_u, df_d, last_dt = scan_fno()
-        st.info(f"Last Date: {last_dt} | BOX hata diya, niche aadhe size ke charts dono taraf")
-
-        # Upar sirf table - BOX nahi
+        st.info(f"Last Date: {last_dt} | LIST BOX hata diya hai")
         c1,c2 = st.columns(2)
         with c1:
             st.markdown(f"<div class='green-box'>↗ LOW se 1% UP: {len(df_u)}</div>", unsafe_allow_html=True)
@@ -126,15 +121,10 @@ if menu == "📈 FNO - HALF CHART SIDE-BY-SIDE":
         with c2:
             st.markdown(f"<div class='red-box'>↘ HIGH se 1% DOWN: {len(df_d)}</div>", unsafe_allow_html=True)
             st.dataframe(df_d.sort_values("HIGH_DOWN %", ascending=False) if not df_d.empty else df_d, use_container_width=True, height=400)
-
         st.divider()
-        st.subheader("📊 Aadhe size charts - Left me LOW UP, Right me HIGH DOWN")
-
-        # Dono ka chart ek saath
-        col_left, col_right = st.columns(2)
+        st.subheader("📊 Aadhe size - Left LOW UP | Right HIGH DOWN")
         up_syms = df_u.sort_values("LOW_UP %", ascending=False)['SYM'].tolist() if not df_u.empty else []
         down_syms = df_d.sort_values("HIGH_DOWN %", ascending=False)['SYM'].tolist() if not df_d.empty else []
-
         max_len = max(len(up_syms), len(down_syms))
         for i in range(max_len):
             cl, cr = st.columns(2)
@@ -154,9 +144,9 @@ if menu == "📈 FNO - HALF CHART SIDE-BY-SIDE":
                         draw_half_chart(sym, f"HIGH-{pct}%")
 
 elif menu == "📋 CUSTOM LIST + HALF CHARTS":
-    st.title("📋 CUSTOM LIST - Half Charts")
-    user_input = st.text_area("Stocks (comma se)", value="PATANJALI, MANKIND, LICHSGFIN, RELIANCE, TCS", height=100)
-    if st.button("🔥 SHOW HALF CHARTS", type="primary", use_container_width=True):
+    st.title("📋 CUSTOM - Half Charts")
+    user_input = st.text_area("Stocks comma se", value="PATANJALI, MANKIND, LICHSGFIN, RELIANCE, TCS", height=100)
+    if st.button("🔥 SHOW CHARTS", type="primary", use_container_width=True):
         symbols = [s.strip().upper().replace(".NS","") for s in user_input.replace("\n",",").split(",") if s.strip()!=""]
         symbols = list(dict.fromkeys(symbols))
         cols = st.columns(2)
@@ -166,11 +156,11 @@ elif menu == "📋 CUSTOM LIST + HALF CHARTS":
                     st.markdown(f"**📈 {sym}**")
                     draw_half_chart(sym)
 
-elif menu == "📊 Sector Heatmap":
-    st.title("📊 Sector Heatmap")
-    if st.button("🔥 GENERATE", type="primary", use_container_width=True):
+elif menu == "📊 Sector Heatmap - Click Wala":
+    st.title("📊 Sector Heatmap - Click Wala FINAL")
+    if st.button("🔥 GENERATE HEATMAP", type="primary", use_container_width=True):
         heat_data=[]
-        bar=st.progress(0)
+        bar=st.progress(0, text="Scanning...")
         for i,sym in enumerate(FNO):
             try:
                 d=yf.Ticker(f"{sym}.NS").history(period="5d", auto_adjust=True)
@@ -182,18 +172,44 @@ elif menu == "📊 Sector Heatmap":
             bar.progress((i+1)/len(FNO))
         bar.empty()
         st.session_state['df_h']=pd.DataFrame(heat_data)
+        st.session_state['selected_sector']=None
+
     if 'df_h' in st.session_state and not st.session_state['df_h'].empty:
         df_h=st.session_state['df_h']
         sec_perf=df_h.groupby('SECTOR')['CHANGE'].mean().reset_index().sort_values('CHANGE',ascending=False)
-        fig_bar=px.bar(sec_perf,x='SECTOR',y='CHANGE',color='CHANGE',color_continuous_scale=[(0,"#d50000"),(0.5,"#1e222d"),(1,"#00c853")],range_color=[-3,3])
-        fig_bar.update_layout(paper_bgcolor="#0e121b",plot_bgcolor="#0e121b",font=dict(color="white"),height=500)
-        st.plotly_chart(fig_bar, use_container_width=True)
-        fig_tree = px.treemap(df_h, path=[px.Constant("NSE FNO"), 'SECTOR', 'SYM'], values='SIZE', color='CHANGE', color_continuous_scale=[(0, "#d50000"), (0.5, "#1e222d"), (1, "#00c853")], range_color=[-3, 3])
-        fig_tree.update_layout(margin=dict(t=10,l=10,r=10,b=10), paper_bgcolor="#0e121b", height=700)
+        fig_bar=px.bar(sec_perf,x='SECTOR',y='CHANGE',color='CHANGE',
+                       color_continuous_scale=[(0,"#d50000"),(0.5,"#1e222d"),(1,"#00c853")],
+                       text=sec_perf['CHANGE'].round(2).astype(str)+'%',
+                       range_color=[-3,3])
+        fig_bar.update_layout(paper_bgcolor="#0e121b",plot_bgcolor="#0e121b",font=dict(color="white"),height=550,showlegend=False,coloraxis_showscale=False)
+        fig_bar.update_traces(textposition='outside')
+        st.markdown("### 👇 Sector bar pe click karo, niche stocks ayenge")
+        clicked=plotly_events(fig_bar,click_event=True,hover_event=False,override_height=550,override_width="100%")
+        if clicked:
+            st.session_state['selected_sector']=clicked[0]['x']
+            st.toast(f"Selected: {clicked[0]['x']}")
+        if st.session_state.get('selected_sector'):
+            sel=st.session_state['selected_sector']
+            sdf=df_h[df_h['SECTOR']==sel].sort_values('CHANGE',ascending=False)
+            st.success(f"👉 {sel} Sector - {len(sdf)} Stocks - Click se list aaya")
+            st.dataframe(sdf, use_container_width=True, height=400)
+            st.markdown(f"#### 📈 {sel} ke aadhe charts")
+            cols = st.columns(3)
+            for idx, row in enumerate(sdf.itertuples()):
+                with cols[idx % 3]:
+                    with st.container(border=True):
+                        st.markdown(f"**{row.SYM} {row.CHANGE}%**")
+                        draw_half_chart(row.SYM, f"{row.CHANGE}%")
+        else:
+            st.info("Kisi sector bar pe click karo...")
+        st.divider()
+        fig_tree = px.treemap(df_h, path=[px.Constant("NSE FNO"), 'SECTOR', 'SYM'], values='SIZE', color='CHANGE',
+                              color_continuous_scale=[(0, "#d50000"), (0.5, "#1e222d"), (1, "#00c853")], range_color=[-3, 3])
+        fig_tree.update_layout(margin=dict(t=10,l=10,r=10,b=10), paper_bgcolor="#0e121b", height=750)
         st.plotly_chart(fig_tree, use_container_width=True)
 
-elif menu == "📰 NEWS - 87 Sources":
-    st.title("📰 LIVE NEWS - 87 Sources")
+elif menu == "📰 NEWS Terminal - 87 Sources":
+    st.title("📰 LIVE NEWS TERMINAL - 87 Sources")
     if st.button("🔄 REFRESH NEWS", type="primary"): st.cache_data.clear()
     news_data = fetch_news(); total = sum(len(v) for v in news_data.values())
     st.success(f"Live • {total} headlines • {datetime.now(IST).strftime('%H:%M:%S')} IST")
@@ -206,8 +222,8 @@ elif menu == "📰 NEWS - 87 Sources":
                 with cols[j]:
                     st.markdown(f"### {cat}")
                     lst = news_data.get(cat, [])
-                    with st.container(border=True, height=800):
-                        for n in lst[:20]:
+                    with st.container(border=True, height=850):
+                        for n in lst[:25]:
                             st.caption(f"{n['TIME']} | {n['SRC']}")
                             st.markdown(f"[{n['TITLE']}]({n['LINK']})")
                             st.divider()
