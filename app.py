@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.patches import Rectangle
 
-st.set_page_config(page_title="TradingPro FINAL - HALF CHART", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="TradingPro FINAL", layout="wide", initial_sidebar_state="expanded")
 IST = pytz.timezone('Asia/Kolkata')
 
 st.markdown("""
@@ -31,37 +31,60 @@ st.markdown("""
 
 def draw_half_chart(symbol, pct_info=""):
     try:
+        today_ist = datetime.now(IST).date()
         df = pd.DataFrame()
         try:
             df_1m = yf.Ticker(f"{symbol}.NS").history(period="1d", interval="1m", auto_adjust=True)
-            if not df_1m.empty and len(df_1m) > 10:
-                df = df_1m.resample('5min').agg({'Open':'first','High':'max','Low':'min','Close':'last','Volume':'sum'}).dropna()
+            if not df_1m.empty:
+                if df_1m.index.tz is not None:
+                    df_1m.index = df_1m.index.tz_convert(IST)
+                else:
+                    df_1m.index = df_1m.index.tz_localize('UTC').tz_convert(IST)
+                df_1m = df_1m[df_1m.index.date == today_ist]
+                if len(df_1m) > 3:
+                    df = df_1m.resample('5min').agg({'Open':'first','High':'max','Low':'min','Close':'last','Volume':'sum'}).dropna()
         except: pass
-        if df.empty or len(df) < 10:
-            try: df = yf.Ticker(f"{symbol}.NS").history(period="2d", interval="5m", auto_adjust=True)
+
+        if df.empty or len(df) < 3:
+            try:
+                df_5 = yf.Ticker(f"{symbol}.NS").history(period="1d", interval="5m", auto_adjust=True)
+                if not df_5.empty:
+                    if df_5.index.tz is not None:
+                        df_5.index = df_5.index.tz_convert(IST)
+                    df_5 = df_5[df_5.index.date == today_ist]
+                    if len(df_5) >= 2:
+                        df = df_5
             except: pass
-        if df.empty or len(df) < 10:
-            df = yf.Ticker(f"{symbol}.NS").history(period="5d", interval="15m", auto_adjust=True)
+
         if df.empty:
-            st.error(f"{symbol} no data"); return
+            st.caption(f"{symbol} - Market khula nahi")
+            return
+
         df = df.tail(80)
         fig, ax = plt.subplots(figsize=(11, 5.5), facecolor='#0e121b')
         ax.set_facecolor('#0e121b')
+        FIXED_CANDLE_WIDTH = 0.002
         for i in range(len(df)):
             o,h,l,c = float(df['Open'].iloc[i]), float(df['High'].iloc[i]), float(df['Low'].iloc[i]), float(df['Close'].iloc[i])
             x = mdates.date2num(df.index[i])
             col = '#00d084' if c >= o else '#ff4d4d'
             ax.plot([x,x],[l,h], color=col, linewidth=1.8)
             bh = abs(c-o)
-            if bh < (h-l)*0.1: bh = (h-l)*0.1
-            rect = Rectangle((x-0.0007, min(o,c)), 0.0014, bh, facecolor=col, edgecolor=col)
+            if bh < (h-l)*0.08: bh = (h-l)*0.08
+            if bh == 0: bh = (h-l)*0.1 if h!=l else 0.1
+            rect = Rectangle((x-FIXED_CANDLE_WIDTH/2, min(o,c)), FIXED_CANDLE_WIDTH, bh, facecolor=col, edgecolor=col, linewidth=0)
             ax.add_patch(rect)
-        ax.set_title(f"{symbol} {pct_info} - 5MIN", color='#00d084', fontsize=14, fontweight='bold', pad=10)
+
+        market_start = IST.localize(datetime.combine(today_ist, datetime.min.time().replace(hour=9, minute=15)))
+        market_end = IST.localize(datetime.combine(today_ist, datetime.min.time().replace(hour=15, minute=30)))
+        ax.set_xlim(mdates.date2num(market_start), mdates.date2num(market_end))
+
+        ax.set_title(f"{symbol} {pct_info} - TODAY 5MIN", color='#00d084', fontsize=14, fontweight='bold', pad=10)
         ax.tick_params(colors='#aaa', labelsize=9)
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
         for spine in ax.spines.values(): spine.set_color('#1e2a3e')
         ax.grid(True, color='#1e2a3e', alpha=0.3)
-        plt.xticks(rotation=15)
+        plt.xticks(rotation=30)
         plt.tight_layout()
         st.pyplot(fig, use_container_width=True)
         plt.close(fig)
@@ -108,14 +131,14 @@ def fetch_news():
 
 with st.sidebar:
     st.markdown("## 🔷 TradingPro")
-    menu = st.radio("Navigation", ["📈 FNO - HALF CHART SIDE-BY-SIDE","📋 CUSTOM LIST + HALF CHARTS","📊 Sector Heatmap","📰 NEWS - 87 Sources"], label_visibility="collapsed")
+    menu = st.radio("Navigation", ["📈 FNO - HALF CHART SIDE-BY-SIDE","📊 Sector Heatmap","📰 NEWS - 87 Sources"], label_visibility="collapsed")
     st.caption(f"📅 {datetime.now(IST).strftime('%d %b %Y %I:%M %p')} IST")
 
 if menu == "📈 FNO - HALF CHART SIDE-BY-SIDE":
     st.title("📈 FNO - Aadhe Charts - Side by Side")
     if st.button("🚀 SCAN FNO", type="primary", use_container_width=True):
         df_u, df_d, last_dt = scan_fno()
-        st.info(f"Last Date: {last_dt} | BOX hata diya, niche aadhe size ke charts dono taraf")
+        st.info(f"Last Date: {last_dt} | BOX hata diya")
         c1,c2 = st.columns(2)
         with c1:
             st.markdown(f"<div class='green-box'>↗ LOW se 1% UP: {len(df_u)}</div>", unsafe_allow_html=True)
@@ -145,19 +168,6 @@ if menu == "📈 FNO - HALF CHART SIDE-BY-SIDE":
                         st.markdown(f"**↘ {sym} - HIGH se {pct}% DOWN**")
                         draw_half_chart(sym, f"HIGH-{pct}%")
 
-elif menu == "📋 CUSTOM LIST + HALF CHARTS":
-    st.title("📋 CUSTOM LIST - Half Charts")
-    user_input = st.text_area("Stocks (comma se)", value="PATANJALI, MANKIND, LICHSGFIN, RELIANCE, TCS", height=100)
-    if st.button("🔥 SHOW HALF CHARTS", type="primary", use_container_width=True):
-        symbols = [s.strip().upper().replace(".NS","") for s in user_input.replace("\n",",").split(",") if s.strip()!=""]
-        symbols = list(dict.fromkeys(symbols))
-        cols = st.columns(2)
-        for idx, sym in enumerate(symbols):
-            with cols[idx % 2]:
-                with st.container(border=True):
-                    st.markdown(f"**📈 {sym}**")
-                    draw_half_chart(sym)
-
 elif menu == "📊 Sector Heatmap":
     st.title("📊 Sector Heatmap - Click Wala")
     if st.button("🔥 GENERATE", type="primary", use_container_width=True):
@@ -179,27 +189,25 @@ elif menu == "📊 Sector Heatmap":
     if 'df_h' in st.session_state and not st.session_state['df_h'].empty:
         df_h=st.session_state['df_h']
         sec_perf=df_h.groupby('SECTOR')['CHANGE'].mean().reset_index().sort_values('CHANGE',ascending=False)
+        # RED GREEN ONLY - Gradient hata ke solid red/green
+        sec_perf['COLOR'] = sec_perf['CHANGE'].apply(lambda x: '#00c853' if x >= 0 else '#d50000')
 
-        fig_bar=px.bar(sec_perf,x='SECTOR',y='CHANGE',color='CHANGE',
-                       color_continuous_scale=[(0,"#d50000"),(0.5,"#1e222d"),(1,"#00c853")],
+        fig_bar=px.bar(sec_perf,x='SECTOR',y='CHANGE',color='COLOR',
+                       color_discrete_map={'#00c853':'#00c853','#d50000':'#d50000'},
                        text=sec_perf['CHANGE'].round(2).astype(str)+'%',
-                       range_color=[-3,3])
-        fig_bar.update_layout(paper_bgcolor="#0e121b",plot_bgcolor="#0e121b",font=dict(color="white"),height=500,showlegend=False,coloraxis_showscale=False)
+                       )
+        fig_bar.update_layout(paper_bgcolor="#0e121b",plot_bgcolor="#0e121b",font=dict(color="white"),height=500,showlegend=False)
         fig_bar.update_traces(textposition='outside')
-
-        # SIRF YE CLICK WALA PART JODA HAI - BAAKI SAME
         st.markdown("### 👇 Sector bar pe click karo, niche stocks ayenge")
         clicked = plotly_events(fig_bar, click_event=True, hover_event=False, override_height=500, override_width="100%")
         if clicked:
             st.session_state['selected_sector'] = clicked[0]['x']
             st.toast(f"Selected: {clicked[0]['x']}")
-
         if st.session_state.get('selected_sector'):
             sel = st.session_state['selected_sector']
             sdf = df_h[df_h['SECTOR']==sel].sort_values('CHANGE',ascending=False)
-            st.success(f"👉 {sel} Sector - {len(sdf)} Stocks (Click se aaya)")
+            st.success(f"👉 {sel} Sector - {len(sdf)} Stocks")
             st.dataframe(sdf, use_container_width=True, height=400)
-
         st.divider()
         fig_tree = px.treemap(df_h, path=[px.Constant("NSE FNO"), 'SECTOR', 'SYM'], values='SIZE', color='CHANGE', color_continuous_scale=[(0, "#d50000"), (0.5, "#1e222d"), (1, "#00c853")], range_color=[-3, 3])
         fig_tree.update_layout(margin=dict(t=10,l=10,r=10,b=10), paper_bgcolor="#0e121b", height=700)
