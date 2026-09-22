@@ -233,6 +233,20 @@ if remaining <= 0:
     st.rerun()
 else:
     st.markdown(f"<p style='text-align:center; color:#666; font-size:12px; margin-top:30px;'>🔄 Auto refresh in {int(remaining)} sec | Last: {datetime.now(IST).strftime('%H:%M:%S')} IST</p>", unsafe_allow_html=True)
-    # Ye line page ko 1 sec baad check karwayegi
-    time.sleep(1)
+    # ================= FIXED CANDLE REFRESH 9:15, 9:20, 9:25 =================
+from datetime import timedelta
+now = datetime.now(IST)
+next_min = ((now.minute // 5) + 1) * 5
+next_time = now.replace(second=0, microsecond=0)
+if next_min >= 60:
+    next_time = next_time.replace(minute=0) + timedelta(hours=1)
+else:
+    next_time = next_time.replace(minute=next_min)
+
+remaining = (next_time - now).total_seconds()
+
+# Market time me hi refresh
+if 9 <= now.hour <= 15 and now.weekday() < 5:
+    st.markdown(f"<p style='text-align:center;color:#00d084;font-size:12px'>Next: {next_time.strftime('%H:%M')} ({int(remaining)}s) | Last: {now.strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
+    time.sleep(max(1, remaining))
     st.rerun()
