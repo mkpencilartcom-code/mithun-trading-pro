@@ -55,7 +55,7 @@ def draw_half_chart(symbol, pct_info=""):
                         df = df_5
             except: pass
         if df.empty:
-            st.caption(f"{symbol} - Market khula nahi / Data nahi")
+            st.caption(f"{symbol} - Market khula nahi")
             return
         df = df.tail(80)
         fig, ax = plt.subplots(figsize=(11, 5.5), facecolor='#0e121b')
@@ -95,7 +95,6 @@ def scan_fno():
     bar = st.progress(0, text="Scanning FNO...")
     for i, sym in enumerate(FNO):
         try:
-            # 10 din le liya taaki holiday ke baad bhi data mile
             d = yf.Ticker(f"{sym}.NS").history(period="10d", auto_adjust=True)
             if d.empty: continue
             last_date = d.index[-1].strftime("%d-%m-%Y")
@@ -109,7 +108,7 @@ def scan_fno():
     bar.empty()
     return pd.DataFrame(up), pd.DataFrame(down), last_date
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=10)
 def fetch_news():
     all_news={}
     for cat, feeds in RSS_FEEDS.items():
@@ -118,7 +117,6 @@ def fetch_news():
             try:
                 f=feedparser.parse(url, agent="Mozilla/5.0")
                 for e in f.entries[:6]:
-                    # Date parsing robust
                     try:
                         if hasattr(e,'published_parsed') and e.published_parsed:
                             dt = datetime(*e.published_parsed[:6])
@@ -127,11 +125,8 @@ def fetch_news():
                     except:
                         dt = datetime.now()
                     lst.append({"TIME":dt.strftime("%H:%M"),"SRC":src,"TITLE":e.title if hasattr(e,'title') else 'No Title',"LINK":e.link if hasattr(e,'link') else '#',"DT":dt})
-            except:
-                continue
-        # Date se sort, agar empty bhi ho to chalega
-        lst = sorted(lst,key=lambda x:x['DT'],reverse=True)[:25]
-        all_news[cat]=lst
+            except: continue
+        all_news[cat]=sorted(lst,key=lambda x:x['DT'],reverse=True)[:25]
     return all_news
 
 with st.sidebar:
@@ -151,7 +146,6 @@ if menu == "📈 FNO - HALF CHART SIDE-BY-SIDE":
             st.session_state['df_d'] = df_d
             st.session_state['last_dt'] = last_dt
             st.session_state['last_scan_time'] = datetime.now(IST)
-
     if auto_on:
         now_tmp = datetime.now(IST)
         last_scan = st.session_state.get('last_scan_time')
@@ -162,21 +156,20 @@ if menu == "📈 FNO - HALF CHART SIDE-BY-SIDE":
             st.session_state['last_dt'] = last_dt
             st.session_state['last_scan_time'] = now_tmp
             st.toast(f"Auto Scan: {now_tmp.strftime('%H:%M:%S')}")
-
     if 'df_u' in st.session_state and not st.session_state['df_u'].empty:
         df_u = st.session_state['df_u']
         df_d = st.session_state['df_d']
         last_dt = st.session_state.get('last_dt','')
         last_scan_time = st.session_state.get('last_scan_time')
         scan_time_str = last_scan_time.strftime('%H:%M:%S') if last_scan_time else ''
-        st.info(f"Last Date: {last_dt} | Last Scan: {scan_time_str} | Mode: {'Auto 5min ON' if auto_on else 'Manual'} | UP: {len(df_u)} DOWN: {len(df_d)}")
+        st.info(f"Last Date: {last_dt} | Last Scan: {scan_time_str} | Mode: {'Auto 5min ON' if auto_on else 'Manual'}")
         c1,c2 = st.columns(2)
         with c1:
             st.markdown(f"<div class='green-box'>↗ LOW se 1% UP: {len(df_u)}</div>", unsafe_allow_html=True)
-            st.dataframe(df_u.sort_values("LOW_UP %", ascending=False) if not df_u.empty else df_u, use_container_width=True, height=400)
+            st.dataframe(df_u.sort_values("LOW_UP %", ascending=False).reset_index(drop=True), use_container_width=True, height=400, hide_index=True)
         with c2:
             st.markdown(f"<div class='red-box'>↘ HIGH se 1% DOWN: {len(df_d)}</div>", unsafe_allow_html=True)
-            st.dataframe(df_d.sort_values("HIGH_DOWN %", ascending=False) if not df_d.empty else df_d, use_container_width=True, height=400)
+            st.dataframe(df_d.sort_values("HIGH_DOWN %", ascending=False).reset_index(drop=True), use_container_width=True, height=400, hide_index=True)
         st.divider()
         st.subheader("📊 Aadhe size charts")
         up_syms = df_u.sort_values("LOW_UP %", ascending=False)['SYM'].tolist() if not df_u.empty else []
@@ -199,7 +192,7 @@ if menu == "📈 FNO - HALF CHART SIDE-BY-SIDE":
                         st.markdown(f"**↘ {sym} - HIGH se {pct}% DOWN**")
                         draw_half_chart(sym, f"HIGH-{pct}%")
     else:
-        st.warning("SCAN NOW dabao - Market close ke baad bhi data ayega. 10 din ka data le raha hu taaki holiday issue na ho.")
+        st.warning("SCAN NOW dabao")
 
 elif menu == "📊 Sector Heatmap":
     st.title("📊 Sector Heatmap - % Wise Sorted")
@@ -221,35 +214,64 @@ elif menu == "📊 Sector Heatmap":
 
     if 'df_h' in st.session_state and not st.session_state['df_h'].empty:
         df_h = st.session_state['df_h'].sort_values('CHANGE', ascending=False)
-        df_green = df_h[df_h['CHANGE'] >= 0].sort_values('CHANGE', ascending=False)
-        df_red = df_h[df_h['CHANGE'] < 0].sort_values('CHANGE', ascending=False)
+        # GREEN = High to Low, RED = Low to High (most fallen first)
+        df_green = df_h[df_h['CHANGE'] >= 0].sort_values('CHANGE', ascending=False).reset_index(drop=True)
+        df_red = df_h[df_h['CHANGE'] < 0].sort_values('CHANGE', ascending=True).reset_index(drop=True)
+
         c1,c2 = st.columns(2)
         with c1:
             st.markdown(f"<div class='green-box'>🟢 GREEN High to Low: {len(df_green)}</div>", unsafe_allow_html=True)
-            st.dataframe(df_green[['SYM','SECTOR','CHANGE','LTP']], use_container_width=True, height=500)
+            st.dataframe(df_green[['SYM','SECTOR','CHANGE','LTP']], use_container_width=True, height=500, hide_index=True)
         with c2:
-            st.markdown(f"<div class='red-box'>🔴 RED High to Low: {len(df_red)}</div>", unsafe_allow_html=True)
-            st.dataframe(df_red[['SYM','SECTOR','CHANGE','LTP']], use_container_width=True, height=500)
+            st.markdown(f"<div class='red-box'>🔴 RED Most Fallen First: {len(df_red)}</div>", unsafe_allow_html=True)
+            st.dataframe(df_red[['SYM','SECTOR','CHANGE','LTP']], use_container_width=True, height=500, hide_index=True)
+
         st.divider()
+        st.markdown("### 📈 Sector Performance")
         sec_perf=df_h.groupby('SECTOR')['CHANGE'].mean().reset_index().sort_values('CHANGE',ascending=False)
-        sec_perf['COLOR'] = sec_perf['CHANGE'].apply(lambda x: '#00c853' if x >= 0 else '#d50000')
-        fig_bar=px.bar(sec_perf,x='SECTOR',y='CHANGE',color='COLOR',
-                       color_discrete_map={'#00c853':'#00c853','#d50000':'#d50000'},
-                       text=sec_perf['CHANGE'].round(2).astype(str)+'%',)
-        fig_bar.update_layout(paper_bgcolor="#0e121b",plot_bgcolor="#0e121b",font=dict(color="white"),height=500,showlegend=False)
-        fig_bar.update_traces(textposition='outside')
-        st.markdown("### 👇 Sector bar pe click karo")
-        clicked = plotly_events(fig_bar, click_event=True, hover_event=False, override_height=500, override_width="100%")
+        # Premium Bar Chart Design
+        sec_perf['COLOR_LABEL'] = sec_perf['CHANGE'].apply(lambda x: 'Profit' if x >=0 else 'Loss')
+        fig_bar = px.bar(
+            sec_perf,
+            x='SECTOR',
+            y='CHANGE',
+            color='COLOR_LABEL',
+            color_discrete_map={'Profit':'#00e676', 'Loss':'#ff1744'},
+            text=sec_perf['CHANGE'].apply(lambda x: f"{x:+.2f}%"),
+            hover_data={'CHANGE':':.2f', 'SECTOR':True}
+        )
+        fig_bar.update_traces(
+            marker_line_width=0,
+            marker=dict(line=dict(width=0), cornerradius=8),
+            textposition='outside',
+            textfont=dict(size=13, color='white', family="Inter"),
+            hovertemplate="<b>%{x}</b><br>Change: %{y:.2f}%<extra></extra>"
+        )
+        fig_bar.update_layout(
+            paper_bgcolor="#0e121b",
+            plot_bgcolor="#0e121b",
+            font=dict(color="white", family="Inter"),
+            height=550,
+            showlegend=False,
+            xaxis=dict(tickangle=-30, gridcolor='#1e2a3e', title=''),
+            yaxis=dict(gridcolor='#1e2a3e', zerolinecolor='#2a3a50', title='Avg % Change'),
+            margin=dict(t=50, b=100)
+        )
+        # Gradient effect via shapes
+        st.markdown("#### 👇 Sector bar pe click karo, niche stocks ayenge")
+        clicked = plotly_events(fig_bar, click_event=True, hover_event=False, override_height=550, override_width="100%")
         if clicked:
             st.session_state['selected_sector'] = clicked[0]['x']
+
         if st.session_state.get('selected_sector'):
             sel = st.session_state['selected_sector']
-            sdf = df_h[df_h['SECTOR']==sel].sort_values('CHANGE',ascending=False)
-            st.success(f"👉 {sel} Sector - {len(sdf)} Stocks")
-            st.dataframe(sdf[['SYM','CHANGE','LTP','SECTOR']], use_container_width=True, height=400)
+            sdf = df_h[df_h['SECTOR']==sel].sort_values('CHANGE',ascending=False).reset_index(drop=True)
+            st.success(f"👉 {sel} Sector - {len(sdf)} Stocks - High to Low Sorted")
+            st.dataframe(sdf[['SYM','CHANGE','LTP','SECTOR']], use_container_width=True, height=400, hide_index=True)
             if st.button("❌ Clear Selection"):
                 st.session_state['selected_sector'] = None
                 st.rerun()
+
         st.divider()
         st.subheader("🔥 Treemap - Har dabbe pe naam + % + LTP")
         df_h['LABEL'] = df_h['SYM'] + '<br>' + df_h['CHANGE'].astype(str) + '%<br>₹' + df_h['LTP'].astype(str)
@@ -266,7 +288,7 @@ elif menu == "📰 NEWS - 87 Sources":
         st.rerun()
     news_data = fetch_news()
     total = sum(len(v) for v in news_data.values())
-    st.success(f"Live • {total} headlines • {datetime.now(IST).strftime('%H:%M:%S')} IST - Market close ke baad bhi ayega")
+    st.success(f"Live • {total} headlines • {datetime.now(IST).strftime('%H:%M:%S')} IST")
     cats = list(RSS_FEEDS.keys())
     for i in range(0, len(cats), 3):
         cols = st.columns(3)
@@ -278,16 +300,15 @@ elif menu == "📰 NEWS - 87 Sources":
                     lst = news_data.get(cat, [])
                     with st.container(border=True, height=800):
                         if not lst:
-                            st.write("No news - feed down")
+                            st.write("No news")
                         for n in lst[:20]:
                             st.caption(f"{n['TIME']} | {n['SRC']}")
                             st.markdown(f"[{n['TITLE']}]({n['LINK']})")
                             st.divider()
 
-# ================= FIXED 5 MIN CANDLE REFRESH - ONLY FOR FNO PAGE =================
+# ================= BOTTOM REFRESH ONLY FOR FNO =================
 now = datetime.now(IST)
 is_market_hours = 9 <= now.hour < 16 and now.weekday() < 5 and not (now.hour == 15 and now.minute > 30)
-
 if menu == "📈 FNO - HALF CHART SIDE-BY-SIDE" and is_market_hours:
     next_min = ((now.minute // 5) + 1) * 5
     next_time = now.replace(second=0, microsecond=0)
