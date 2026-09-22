@@ -86,9 +86,133 @@ def draw_half_chart(symbol, pct_info=""):
     except Exception as e:
         st.error(f"{symbol}: {e}")
 
-FNO = ["360ONE","ABB","APLAPOLLO","AUBANK","ADANIENSOL","ADANIENT","ADANIGREEN","ADANIPORTS","ADANIPOWER","ABCAPITAL","ALKEM","AMBER","AMBUJACEM","ANGELONE","APOLLOHOSP","ASHOKLEY","ASIANPAINT","ASTRAL","ATHERENERG","AUROPHARMA","DMART","AXISBANK","BSE","BAJAJ-AUTO","BAJFINANCE","BAJAJFINSV","BAJAJHLDNG","BANDHANBNK","BANKBARODA","BANKINDIA","MAHABANK","BDL","BEL","BHARATFORG","BHEL","BPCL","BHARTIARTL","BIOCON","BLUESTARCO","BOSCHLTD","BRITANNIA","CGPOWER","CANBK","CDSL","CHOLAFIN","CIPLA","COALINDIA","COCHINSHIP","COFORGE","COLPAL","CAMS","CONCOR","CROMPTON","CUMMINSIND","DLF","DABUR","DELHIVERY","DIVISLAB","DIXON","DRREDDY","ETERNAL","EICHERMOT","FORCEMOT","NYKAA","FORTIS","GAIL","GVT&D","GMRAIRPORT","GLENMARK","GODFRYPHLP","GODREJCP","GODREJPROP","GRASIM","HCLTECH","HDFCAMC","HDFCBANK","HDFCLIFE","HAVELLS","HEROMOTOCO","HINDALCO","HAL","HINDPETRO","HINDUNILVR","HINDZINC","POWERINDIA","HYUNDAI","ICICIBANK","ICICIGI","ICICIPRULI","IDFCFIRSTB","ITC","INDIANB","IEX","IOC","IRFC","IREDA","INDUSTOWER","INDUSINDBK","NAUKRI","INFY","INOXWIND","INDIGO","JINDALSTEL","JSWENERGY","JSWSTEEL","JIOFIN","JUBLFOOD","KEI","KPITTECH","KALYANKJIL","KAYNES","KFINTECH","KOTAKBANK","LTF","LICHSGFIN","LTM","LT","LAURUSLABS","LICI","LODHA","LUPIN","M&M","MANAPPURAM","MANKIND","MARICO","MARUTI","MFSL","MAXHEALTH","MAZDOCK","MOTILALOFS","MPHASIS","MCX","MUTHOOTFIN","NBCC","NHPC","NMDC","NTPC","NATIONALUM","NESTLEIND","NAM-INDIA","OBEROIRLTY","ONGC","OIL","PAYTM","OFSS","POLICYBZR","PGEL","PIIND","PNBHOUSING","PAGEIND","PATANJALI","PERSISTENT","PETRONET","PIDILITIND","POLYCAB","PFC","POWERGRID","PREMIERENE","PRESTIGE","PNB","RBLBANK","RECLTD","RADICO","RVNL","RELIANCE","SAGILITY","SBICARD","SBILIFE","SHREECEM","SRF","MOTHERSON","SHRIRAMFIN","SIEMENS","SOLARINDS","SONACOMS","SBIN","SAIL","SUNPHARMA","SUPREMEIND","SUZLON","SWIGGY","TATACONSUM","TVSMOTOR","TCS","TATAELXSI","TMPV","TATAPOWER","TATASTEEL","TECHM","FEDERALBNK","INDHOTEL","PHOENIXLTD","TITAN","TORNTPHARM","TRENT","TIINDIA","UNOMINDA","UPL","ULTRACEMCO","UNIONBANK","UNITDSPR","VBL","VEDL","VMM","IDEA","VOLTAS","WAAREEENER","WIPRO","YESBANK","ZYDUSLIFE"]
+FNO = [
+"360ONE","ABB","APLAPOLLO","AUBANK","ADANIENSOL","ADANIENT","ADANIGREEN","ADANIPORTS","ADANIPOWER",
+"ABCAPITAL","ALKEM","AMBER","AMBUJACEM","ANGELONE","APOLLOHOSP","ASHOKLEY","ASIANPAINT","ASTRAL",
+"ATHERENERG","AUROPHARMA","DMART","AXISBANK","BSE","BAJAJ-AUTO","BAJFINANCE","BAJAJFINSV","BAJAJHLDNG",
+"BANDHANBNK","BANKBARODA","BANKINDIA","MAHABANK","BDL","BEL","BHARATFORG","BHEL","BPCL","BHARTIARTL",
+"BIOCON","BLUESTARCO","BOSCHLTD","BRITANNIA","CGPOWER","CANBK","CDSL","CHOLAFIN","CIPLA","COALINDIA",
+"COCHINSHIP","COFORGE","COLPAL","CAMS","CONCOR","CROMPTON","CUMMINSIND","DLF","DABUR","DELHIVERY",
+"DIVISLAB","DIXON","DRREDDY","ETERNAL","EICHERMOT","FORCEMOT","NYKAA","FORTIS","GAIL","GVT&D",
+"GMRAIRPORT","GLENMARK","GODFRYPHLP","GODREJCP","GODREJPROP","GRASIM","HCLTECH","HDFCAMC","HDFCBANK",
+"HDFCLIFE","HAVELLS","HEROMOTOCO","HINDALCO","HAL","HINDPETRO","HINDUNILVR","HINDZINC","POWERINDIA",
+"HYUNDAI","ICICIBANK","ICICIGI","ICICIPRULI","IDFCFIRSTB","ITC","INDIANB","IEX","IOC","IRFC","IREDA",
+"INDUSTOWER","INDUSINDBK","NAUKRI","INFY","INOXWIND","INDIGO","JINDALSTEL","JSWENERGY","JSWSTEEL",
+"JIOFIN","JUBLFOOD","KEI","KPITTECH","KALYANKJIL","KAYNES","KFINTECH","KOTAKBANK","LTF","LICHSGFIN",
+"LTM","LT","LAURUSLABS","LICI","LODHA","LUPIN","M&M","MANAPPURAM","MANKIND","MARICO","MARUTI","MFSL",
+"MAXHEALTH","MAZDOCK","MOTILALOFS","MPHASIS","MCX","MUTHOOTFIN","NBCC","NHPC","NMDC","NTPC","NATIONALUM",
+"NESTLEIND","NAM-INDIA","OBEROIRLTY","ONGC","OIL","PAYTM","OFSS","POLICYBZR","PGEL","PIIND","PNBHOUSING",
+"PAGEIND","PATANJALI","PERSISTENT","PETRONET","PIDILITIND","POLYCAB","PFC","POWERGRID","PREMIERENE",
+"PRESTIGE","PNB","RBLBANK","RECLTD","RADICO","RVNL","RELIANCE","SAGILITY","SBICARD","SBILIFE","SHREECEM",
+"SRF","MOTHERSON","SHRIRAMFIN","SIEMENS","SOLARINDS","SONACOMS","SBIN","SAIL","SUNPHARMA","SUPREMEIND",
+"SUZLON","SWIGGY","TATACONSUM","TVSMOTOR","TCS","TATAELXSI","TMPV","TATAPOWER","TATASTEEL","TECHM",
+"FEDERALBNK","INDHOTEL","PHOENIXLTD","TITAN","TORNTPHARM","TRENT","TIINDIA","UNOMINDA","UPL","ULTRACEMCO",
+"UNIONBANK","UNITDSPR","VBL","VEDL","VMM","IDEA","VOLTAS","WAAREEENER","WIPRO","YESBANK","ZYDUSLIFE"
+]
+
 SECTOR_MAP_FULL = {"HDFCBANK":"Banking","ICICIBANK":"Banking","SBIN":"Banking","AXISBANK":"Banking","KOTAKBANK":"Banking","INDUSINDBK":"Banking","BANDHANBNK":"Banking","BANKBARODA":"Banking","BANKINDIA":"Banking","FEDERALBNK":"Banking","IDFCFIRSTB":"Banking","RBLBANK":"Banking","PNB":"Banking","INDIANB":"Banking","CANBK":"Banking","UNIONBANK":"Banking","MAHABANK":"Banking","YESBANK":"Banking","BAJFINANCE":"Finance","BAJAJFINSV":"Finance","SBILIFE":"Finance","HDFCLIFE":"Finance","ICICIPRULI":"Finance","ICICIGI":"Finance","SBICARD":"Finance","CHOLAFIN":"Finance","MUTHOOTFIN":"Finance","SHRIRAMFIN":"Finance","LICHSGFIN":"Finance","LTF":"Finance","RECLTD":"Finance","PFC":"Finance","BSE":"Finance","CDSL":"Finance","CAMS":"Finance","KFINTECH":"Finance","JIOFIN":"Finance","ABCAPITAL":"Finance","360ONE":"Finance","ANGELONE":"Finance","MOTILALOFS":"Finance","MANAPPURAM":"Finance","PNBHOUSING":"Finance","NAM-INDIA":"Finance","HDFCAMC":"Finance","MCX":"Finance","RELIANCE":"Energy","ONGC":"Energy","BPCL":"Energy","IOC":"Energy","HINDPETRO":"Energy","GAIL":"Energy","OIL":"Energy","NTPC":"Energy","POWERGRID":"Energy","JSWENERGY":"Energy","ADANIPOWER":"Energy","ADANIGREEN":"Energy","TATAPOWER":"Energy","NHPC":"Energy","ADANIENSOL":"Energy","INFY":"IT","TCS":"IT","HCLTECH":"IT","WIPRO":"IT","TECHM":"IT","COFORGE":"IT","MPHASIS":"IT","PERSISTENT":"IT","LTM":"IT","KPITTECH":"IT","OFSS":"IT","MARUTI":"Auto","M&M":"Auto","TMPV":"Auto","BAJAJ-AUTO":"Auto","EICHERMOT":"Auto","TVSMOTOR":"Auto","ASHOKLEY":"Auto","BHARATFORG":"Auto","BOSCHLTD":"Auto","MOTHERSON":"Auto","UNOMINDA":"Auto","SONACOMS":"Auto","TIINDIA":"Auto","SUNPHARMA":"Pharma","DRREDDY":"Pharma","CIPLA":"Pharma","DIVISLAB":"Pharma","LUPIN":"Pharma","AUROPHARMA":"Pharma","ALKEM":"Pharma","TORNTPHARM":"Pharma","ZYDUSLIFE":"Pharma","LAURUSLABS":"Pharma","BIOCON":"Pharma","MANKIND":"Pharma","ITC":"FMCG","HINDUNILVR":"FMCG","NESTLEIND":"FMCG","BRITANNIA":"FMCG","TATACONSUM":"FMCG","DABUR":"FMCG","GODREJCP":"FMCG","MARICO":"FMCG","COLPAL":"FMCG","VBL":"FMCG","GODFRYPHLP":"FMCG","RADICO":"FMCG","UNITDSPR":"FMCG","LT":"Capital Goods","BEL":"Capital Goods","BHEL":"Capital Goods","SIEMENS":"Capital Goods","ABB":"Capital Goods","CGPOWER":"Capital Goods","CUMMINSIND":"Capital Goods","POLYCAB":"Capital Goods","KEI":"Capital Goods","HAVELLS":"Capital Goods","POWERINDIA":"Capital Goods","GVT&D":"Capital Goods","VOLTAS":"Capital Goods","CROMPTON":"Capital Goods","BLUESTARCO":"Capital Goods","ASTRAL":"Capital Goods","DIXON":"Capital Goods","KAYNES":"Capital Goods","AMBER":"Capital Goods","PGEL":"Capital Goods","BDL":"Capital Goods","HAL":"Capital Goods","MAZDOCK":"Capital Goods","COCHINSHIP":"Capital Goods","JSWSTEEL":"Metals","TATASTEEL":"Metals","HINDALCO":"Metals","VEDL":"Metals","NMDC":"Metals","SAIL":"Metals","JINDALSTEL":"Metals","HINDZINC":"Metals","NATIONALUM":"Metals","ULTRACEMCO":"Cement","SHREECEM":"Cement","AMBUJACEM":"Cement","GRASIM":"Cement","DLF":"Realty","GODREJPROP":"Realty","OBEROIRLTY":"Realty","LODHA":"Realty","PRESTIGE":"Realty","PHOENIXLTD":"Realty","ADANIENT":"Adani","ADANIPORTS":"Adani","GMRAIRPORT":"Adani"}
-RSS_FEEDS = {"🇮🇳 INDIA MARKET (22)": {"MoneyControl Top": "https://www.moneycontrol.com/rss/MCtopnews.xml","MoneyControl Market": "https://www.moneycontrol.com/rss/marketreports.xml","MoneyControl Business": "https://www.moneycontrol.com/rss/business.xml","MoneyControl Economy": "https://www.moneycontrol.com/rss/economy.xml","ET Markets": "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms","ET Stocks": "https://economictimes.indiatimes.com/markets/stocks/rssfeeds/2146842.cms","ET Sensex": "https://economictimes.indiatimes.com/markets/sensex/rssfeeds/477580.cms","ET Nifty": "https://economictimes.indiatimes.com/markets/nse-nifty/rssfeeds/1793823366.cms","LiveMint Markets": "https://www.livemint.com/rss/markets","LiveMint Companies": "https://www.livemint.com/rss/companies","BS Markets": "https://www.business-standard.com/rss/markets-106.rss","BS Economy": "https://www.business-standard.com/rss/economy-105.rss","BS Finance": "https://www.business-standard.com/rss/finance-103.rss","FE Market": "https://www.financialexpress.com/market/feed/","FE Economy": "https://www.financialexpress.com/economy/feed/","CNBC TV18 All": "https://www.cnbctv18.com/commonfeeds/v1/cnbcv18all.xml","CNBC TV18 Market": "https://www.cnbctv18.com/commonfeeds/v1/cnbcv18market.xml","CNBC TV18 Economy": "https://www.cnbctv18.com/commonfeeds/v1/cnbcv18economy.xml","NDTV Profit": "https://www.ndtvprofit.com/rss","NDTV Economy": "https://www.ndtvprofit.com/rss/economy","Zee Business": "https://zeenews.india.com/rss/business.xml","MC IPO": "https://www.moneycontrol.com/rss/ipo.xml",},"🌎 GLOBAL MARKET (20)": {"Reuters Business": "http://feeds.reuters.com/reuters/businessNews","Reuters Markets": "http://feeds.reuters.com/reuters/marketsNews","Reuters Top": "http://feeds.reuters.com/reuters/topNews","CNBC Top": "https://www.cnbc.com/id/100003114/device/rss/rss.html","CNBC Markets": "https://www.cnbc.com/id/10000664/device/rss/rss.html","CNBC Economy": "https://www.cnbc.com/id/10000113/device/rss/rss.html","Yahoo Finance": "https://finance.yahoo.com/news/rssindex","MarketWatch Top": "http://feeds.marketwatch.com/marketwatch/topstories/","MarketWatch Pulse": "http://feeds.marketwatch.com/marketwatch/marketpulse/","MarketWatch RealTime": "http://feeds.marketwatch.com/marketwatch/realtimeheadlines/","Investing News": "https://www.investing.com/rss/news.rss","Investing Overview": "https://www.investing.com/rss/market_overview.rss","BBC Business": "http://feeds.bbci.co.uk/news/business/rss.xml","BBC World": "http://feeds.bbci.co.uk/news/world/rss.xml","NYT Business": "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml","NYT Economy": "https://rss.nytimes.com/services/xml/rss/nyt/Economy.xml","FT Markets": "https://www.ft.com/markets?format=rss","Bloomberg Markets": "https://feeds.bloomberg.com/markets/news.rss","WSJ Markets": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml","WSJ Economy": "https://feeds.a.dj.com/rss/RSSWSJD.xml",},"🛢️ COMMODITY (15)": {"MC Commodity": "https://www.moneycontrol.com/rss/commodity.xml","ET Commodity": "https://economictimes.indiatimes.com/commodity/rssfeeds/1808152121.cms","OilPrice Main": "https://oilprice.com/rss/main","OilPrice Energy": "https://oilprice.com/rss/energy-news","Kitco News": "https://www.kitco.com/rss/KitcoNews.xml","Kitco Gold": "https://www.kitco.com/rss/gold.xml","Investing Commodity": "https://www.investing.com/rss/commodities_Feed.rss","Investing Gold": "https://www.investing.com/rss/commodities_Gold.rss","Investing Oil": "https://www.investing.com/rss/commodities_Oil.rss","GoldPrice": "https://goldprice.org/rss","ET Energy": "https://economictimes.indiatimes.com/industry/energy/rssfeeds/1783664934.cms","LiveMint Commodity": "https://www.livemint.com/rss/commodities","Commodity Online": "https://www.commodityonline.com/rss/","MCX India": "https://www.mcxindia.com/rss/mcx-news.xml","Investing Silver": "https://www.investing.com/rss/commodities_Silver.rss",},"₿ CRYPTO (10)": {"CoinDesk": "https://www.coindesk.com/arc/outboundfeeds/rss/","CoinDesk Markets": "https://www.coindesk.com/arc/outboundfeeds/rss/?collection=markets","CoinTelegraph": "https://cointelegraph.com/rss","CoinTelegraph Markets": "https://cointelegraph.com/rss-feeds/markets","Decrypt": "https://decrypt.co/feed","Investing Crypto": "https://www.investing.com/rss/news_301.rss","Bitcoin.com": "https://news.bitcoin.com/feed/","NewsBTC": "https://www.newsbtc.com/feed/","CryptoPanic": "https://cryptopanic.com/news/rss/","CoinJournal": "https://coinjournal.net/feed/",},"🏦 RBI / INDIA ECO (10)": {"RBI Press": "https://www.rbi.org.in/rss/RBI_PressRelease.xml","RBI Speech": "https://www.rbi.org.in/rss/RBI_Speeches.xml","RBI Notification": "https://www.rbi.org.in/rss/RBI_Notification.xml","RBI Circular": "https://www.rbi.org.in/rss/RBI_Circulars.xml","ET Economy": "https://economictimes.indiatimes.com/news/economy/rssfeeds/1373380680.cms","ET RBI": "https://economictimes.indiatimes.com/topic/rbi/rss","LiveMint Economy": "https://www.livemint.com/rss/economy","BS Economy Policy": "https://www.business-standard.com/rss/economy-policy-105.rss","FE Economy 2": "https://www.financialexpress.com/economy/feed/","NDTV Eco": "https://www.ndtvprofit.com/rss/economy",},"🏛️ FED / US ECO (10)": {"Fed All Press": "https://www.federalreserve.gov/feeds/press_all.xml","Fed Monetary": "https://www.federalreserve.gov/feeds/press_monetary.xml","Fed Financial": "https://www.federalreserve.gov/feeds/press_financial.xml","Fed Supervision": "https://www.federalreserve.gov/feeds/press_supervision.xml","Fed Other": "https://www.federalreserve.gov/feeds/other.xml","US Treasury Press": "https://home.treasury.gov/rss/press-releases","ET Fed": "https://economictimes.indiatimes.com/topic/federal-reserve/rss","Investing US Eco": "https://www.investing.com/rss/news_14.rss","BLS News": "https://www.bls.gov/feed/bls_news.xml","BEA News": "https://www.bea.gov/rss/rss.xml",}}
+
+RSS_FEEDS = {
+"🇮🇳 INDIA MARKET (22)": {
+"MoneyControl Top": "https://www.moneycontrol.com/rss/MCtopnews.xml",
+"MoneyControl Market": "https://www.moneycontrol.com/rss/marketreports.xml",
+"MoneyControl Business": "https://www.moneycontrol.com/rss/business.xml",
+"MoneyControl Economy": "https://www.moneycontrol.com/rss/economy.xml",
+"ET Markets": "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
+"ET Stocks": "https://economictimes.indiatimes.com/markets/stocks/rssfeeds/2146842.cms",
+"ET Sensex": "https://economictimes.indiatimes.com/markets/sensex/rssfeeds/477580.cms",
+"ET Nifty": "https://economictimes.indiatimes.com/markets/nse-nifty/rssfeeds/1793823366.cms",
+"LiveMint Markets": "https://www.livemint.com/rss/markets",
+"LiveMint Companies": "https://www.livemint.com/rss/companies",
+"BS Markets": "https://www.business-standard.com/rss/markets-106.rss",
+"BS Economy": "https://www.business-standard.com/rss/economy-105.rss",
+"BS Finance": "https://www.business-standard.com/rss/finance-103.rss",
+"FE Market": "https://www.financialexpress.com/market/feed/",
+"FE Economy": "https://www.financialexpress.com/economy/feed/",
+"CNBC TV18 All": "https://www.cnbctv18.com/commonfeeds/v1/cnbcv18all.xml",
+"CNBC TV18 Market": "https://www.cnbctv18.com/commonfeeds/v1/cnbcv18market.xml",
+"CNBC TV18 Economy": "https://www.cnbctv18.com/commonfeeds/v1/cnbcv18economy.xml",
+"NDTV Profit": "https://www.ndtvprofit.com/rss",
+"NDTV Economy": "https://www.ndtvprofit.com/rss/economy",
+"Zee Business": "https://zeenews.india.com/rss/business.xml",
+"MC IPO": "https://www.moneycontrol.com/rss/ipo.xml",
+},
+"🌎 GLOBAL MARKET (20)": {
+"Reuters Business": "http://feeds.reuters.com/reuters/businessNews",
+"Reuters Markets": "http://feeds.reuters.com/reuters/marketsNews",
+"Reuters Top": "http://feeds.reuters.com/reuters/topNews",
+"CNBC Top": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+"CNBC Markets": "https://www.cnbc.com/id/10000664/device/rss/rss.html",
+"CNBC Economy": "https://www.cnbc.com/id/10000113/device/rss/rss.html",
+"Yahoo Finance": "https://finance.yahoo.com/news/rssindex",
+"MarketWatch Top": "http://feeds.marketwatch.com/marketwatch/topstories/",
+"MarketWatch Pulse": "http://feeds.marketwatch.com/marketwatch/marketpulse/",
+"MarketWatch RealTime": "http://feeds.marketwatch.com/marketwatch/realtimeheadlines/",
+"Investing News": "https://www.investing.com/rss/news.rss",
+"Investing Overview": "https://www.investing.com/rss/market_overview.rss",
+"BBC Business": "http://feeds.bbci.co.uk/news/business/rss.xml",
+"BBC World": "http://feeds.bbci.co.uk/news/world/rss.xml",
+"NYT Business": "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
+"NYT Economy": "https://rss.nytimes.com/services/xml/rss/nyt/Economy.xml",
+"FT Markets": "https://www.ft.com/markets?format=rss",
+"Bloomberg Markets": "https://feeds.bloomberg.com/markets/news.rss",
+"WSJ Markets": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+"WSJ Economy": "https://feeds.a.dj.com/rss/RSSWSJD.xml",
+},
+"🛢️ COMMODITY (15)": {
+"MC Commodity": "https://www.moneycontrol.com/rss/commodity.xml",
+"ET Commodity": "https://economictimes.indiatimes.com/commodity/rssfeeds/1808152121.cms",
+"OilPrice Main": "https://oilprice.com/rss/main",
+"OilPrice Energy": "https://oilprice.com/rss/energy-news",
+"Kitco News": "https://www.kitco.com/rss/KitcoNews.xml",
+"Kitco Gold": "https://www.kitco.com/rss/gold.xml",
+"Investing Commodity": "https://www.investing.com/rss/commodities_Feed.rss",
+"Investing Gold": "https://www.investing.com/rss/commodities_Gold.rss",
+"Investing Oil": "https://www.investing.com/rss/commodities_Oil.rss",
+"GoldPrice": "https://goldprice.org/rss",
+"ET Energy": "https://economictimes.indiatimes.com/industry/energy/rssfeeds/1783664934.cms",
+"LiveMint Commodity": "https://www.livemint.com/rss/commodities",
+"Commodity Online": "https://www.commodityonline.com/rss/",
+"MCX India": "https://www.mcxindia.com/rss/mcx-news.xml",
+"Investing Silver": "https://www.investing.com/rss/commodities_Silver.rss",
+},
+"₿ CRYPTO (10)": {
+"CoinDesk": "https://www.coindesk.com/arc/outboundfeeds/rss/",
+"CoinDesk Markets": "https://www.coindesk.com/arc/outboundfeeds/rss/?collection=markets",
+"CoinTelegraph": "https://cointelegraph.com/rss",
+"CoinTelegraph Markets": "https://cointelegraph.com/rss-feeds/markets",
+"Decrypt": "https://decrypt.co/feed",
+"Investing Crypto": "https://www.investing.com/rss/news_301.rss",
+"Bitcoin.com": "https://news.bitcoin.com/feed/",
+"NewsBTC": "https://www.newsbtc.com/feed/",
+"CryptoPanic": "https://cryptopanic.com/news/rss/",
+"CoinJournal": "https://coinjournal.net/feed/",
+},
+"🏦 RBI / INDIA ECO (10)": {
+"RBI Press": "https://www.rbi.org.in/rss/RBI_PressRelease.xml",
+"RBI Speech": "https://www.rbi.org.in/rss/RBI_Speeches.xml",
+"RBI Notification": "https://www.rbi.org.in/rss/RBI_Notification.xml",
+"RBI Circular": "https://www.rbi.org.in/rss/RBI_Circulars.xml",
+"ET Economy": "https://economictimes.indiatimes.com/news/economy/rssfeeds/1373380680.cms",
+"ET RBI": "https://economictimes.indiatimes.com/topic/rbi/rss",
+"LiveMint Economy": "https://www.livemint.com/rss/economy",
+"BS Economy Policy": "https://www.business-standard.com/rss/economy-policy-105.rss",
+"FE Economy 2": "https://www.financialexpress.com/economy/feed/",
+"NDTV Eco": "https://www.ndtvprofit.com/rss/economy",
+},
+"🏛️ FED / US ECO (10)": {
+"Fed All Press": "https://www.federalreserve.gov/feeds/press_all.xml",
+"Fed Monetary": "https://www.federalreserve.gov/feeds/press_monetary.xml",
+"Fed Financial": "https://www.federalreserve.gov/feeds/press_financial.xml",
+"Fed Supervision": "https://www.federalreserve.gov/feeds/press_supervision.xml",
+"Fed Other": "https://www.federalreserve.gov/feeds/other.xml",
+"US Treasury Press": "https://home.treasury.gov/rss/press-releases",
+"ET Fed": "https://economictimes.indiatimes.com/topic/federal-reserve/rss",
+"Investing US Eco": "https://www.investing.com/rss/news_14.rss",
+"BLS News": "https://www.bls.gov/feed/bls_news.xml",
+"BEA News": "https://www.bea.gov/rss/rss.xml",
+}
+}
 
 def scan_fno():
     up, down = [], []; last_date = None
@@ -140,7 +264,6 @@ if menu == "📈 FNO - HALF CHART SIDE-BY-SIDE":
             st.session_state['df_d'] = df_d
             st.session_state['last_dt'] = last_dt
             st.session_state['last_scan_time'] = datetime.now(IST)
-
     if auto_on:
         now_tmp = datetime.now(IST)
         last_scan = st.session_state.get('last_scan_time')
@@ -151,7 +274,6 @@ if menu == "📈 FNO - HALF CHART SIDE-BY-SIDE":
             st.session_state['last_dt'] = last_dt
             st.session_state['last_scan_time'] = now_tmp
             st.toast(f"Auto Scan: {now_tmp.strftime('%H:%M:%S')}")
-
     if 'df_u' in st.session_state:
         df_u = st.session_state['df_u']
         df_d = st.session_state['df_d']
@@ -162,10 +284,10 @@ if menu == "📈 FNO - HALF CHART SIDE-BY-SIDE":
         c1,c2 = st.columns(2)
         with c1:
             st.markdown(f"<div class='green-box'>↗ LOW se 1% UP: {len(df_u)}</div>", unsafe_allow_html=True)
-            st.dataframe(df_u.sort_values("LOW_UP %", ascending=False) if not df_u.empty else df_u, use_container_width=True, height=400)
+            st.dataframe(df_u.sort_values("LOW_UP %", ascending=False).reset_index(drop=True) if not df_u.empty else df_u, use_container_width=True, height=400, hide_index=True)
         with c2:
             st.markdown(f"<div class='red-box'>↘ HIGH se 1% DOWN: {len(df_d)}</div>", unsafe_allow_html=True)
-            st.dataframe(df_d.sort_values("HIGH_DOWN %", ascending=False) if not df_d.empty else df_d, use_container_width=True, height=400)
+            st.dataframe(df_d.sort_values("HIGH_DOWN %", ascending=False).reset_index(drop=True) if not df_d.empty else df_d, use_container_width=True, height=400, hide_index=True)
         st.divider()
         st.subheader("📊 Aadhe size charts")
         up_syms = df_u.sort_values("LOW_UP %", ascending=False)['SYM'].tolist() if not df_u.empty else []
@@ -207,40 +329,47 @@ elif menu == "📊 Sector Heatmap":
         st.session_state['selected_sector']=None
 
     if 'df_h' in st.session_state and not st.session_state['df_h'].empty:
-        df_h = st.session_state['df_h'].sort_values('CHANGE', ascending=False)
-        df_green = df_h[df_h['CHANGE'] >= 0].sort_values('CHANGE', ascending=False)
-        df_red = df_h[df_h['CHANGE'] < 0].sort_values('CHANGE', ascending=False)
+        df_h = st.session_state['df_h']
+        df_green = df_h[df_h['CHANGE'] >= 0].sort_values('CHANGE', ascending=False).reset_index(drop=True)
+        df_red = df_h[df_h['CHANGE'] < 0].sort_values('CHANGE', ascending=True).reset_index(drop=True)
 
         c1,c2 = st.columns(2)
         with c1:
             st.markdown(f"<div class='green-box'>🟢 GREEN High to Low: {len(df_green)}</div>", unsafe_allow_html=True)
-            st.dataframe(df_green[['SYM','SECTOR','CHANGE','LTP']], use_container_width=True, height=500)
+            st.dataframe(df_green[['SYM','SECTOR','CHANGE','LTP']], use_container_width=True, height=500, hide_index=True)
         with c2:
-            st.markdown(f"<div class='red-box'>🔴 RED High to Low: {len(df_red)}</div>", unsafe_allow_html=True)
-            st.dataframe(df_red[['SYM','SECTOR','CHANGE','LTP']], use_container_width=True, height=500)
+            st.markdown(f"<div class='red-box'>🔴 RED Most Fallen First: {len(df_red)}</div>", unsafe_allow_html=True)
+            st.dataframe(df_red[['SYM','SECTOR','CHANGE','LTP']], use_container_width=True, height=500, hide_index=True)
 
         st.divider()
-        sec_perf=df_h.groupby('SECTOR')['CHANGE'].mean().reset_index().sort_values('CHANGE',ascending=False)
-        sec_perf['COLOR'] = sec_perf['CHANGE'].apply(lambda x: '#00c853' if x >= 0 else '#d50000')
-        fig_bar=px.bar(sec_perf,x='SECTOR',y='CHANGE',color='COLOR',
-                       color_discrete_map={'#00c853':'#00c853','#d50000':'#d50000'},
-                       text=sec_perf['CHANGE'].round(2).astype(str)+'%',)
-        fig_bar.update_layout(paper_bgcolor="#0e121b",plot_bgcolor="#0e121b",font=dict(color="white"),height=500,showlegend=False)
-        fig_bar.update_traces(textposition='outside')
-        st.markdown("### 👇 Sector bar pe click karo")
-        clicked = plotly_events(fig_bar, click_event=True, hover_event=False, override_height=500, override_width="100%")
+        st.markdown("### 📈 Sector Performance - Premium")
+        sec_perf = df_h.groupby('SECTOR')['CHANGE'].mean().reset_index().sort_values('CHANGE',ascending=False)
+        sec_perf['COLOR_LABEL'] = sec_perf['CHANGE'].apply(lambda x: 'Profit' if x >=0 else 'Loss')
+        fig_bar = px.bar(sec_perf, x='SECTOR', y='CHANGE', color='COLOR_LABEL',
+                         color_discrete_map={'Profit':'#00e676', 'Loss':'#ff1744'},
+                         text=sec_perf['CHANGE'].apply(lambda x: f"{x:+.2f}%"))
+        fig_bar.update_traces(marker=dict(cornerradius=8), textposition='outside', textfont=dict(size=13, color='white'))
+        fig_bar.update_layout(paper_bgcolor="#0e121b", plot_bgcolor="#0e121b", font=dict(color="white"), height=550, showlegend=False, xaxis=dict(tickangle=-30, gridcolor='#1e2a3e'), yaxis=dict(gridcolor='#1e2a3e'))
+        st.markdown("👇 Sector bar pe click karo, niche stocks ayenge")
+        clicked = plotly_events(fig_bar, click_event=True, hover_event=False, override_height=550, override_width="100%")
         if clicked:
             st.session_state['selected_sector'] = clicked[0]['x']
         if st.session_state.get('selected_sector'):
             sel = st.session_state['selected_sector']
-            sdf = df_h[df_h['SECTOR']==sel].sort_values('CHANGE',ascending=False)
-            st.success(f"👉 {sel} Sector - {len(sdf)} Stocks")
-            st.dataframe(sdf[['SYM','CHANGE','LTP','SECTOR']], use_container_width=True, height=400)
+            sel_avg = sec_perf[sec_perf['SECTOR']==sel]['CHANGE'].values[0] if not sec_perf[sec_perf['SECTOR']==sel].empty else 0
+            sdf_all = df_h[df_h['SECTOR']==sel]
+            if sel_avg >= 0:
+                sdf = sdf_all.sort_values('CHANGE', ascending=False).reset_index(drop=True)
+                st.success(f"👉 {sel} GREEN ({sel_avg:+.2f}%) - Gaining High to Low: {len(sdf)}")
+            else:
+                sdf = sdf_all.sort_values('CHANGE', ascending=True).reset_index(drop=True)
+                st.error(f"👉 {sel} RED ({sel_avg:+.2f}%) - Most Loss First: {len(sdf)}")
+            st.dataframe(sdf[['SYM','CHANGE','LTP','SECTOR']], use_container_width=True, height=400, hide_index=True)
             if st.button("❌ Clear Selection"):
                 st.session_state['selected_sector'] = None
                 st.rerun()
         st.divider()
-        st.subheader("🔥 Treemap - Har dabbe pe naam + % + LTP")
+        st.subheader("🔥 Treemap")
         df_h['LABEL'] = df_h['SYM'] + '<br>' + df_h['CHANGE'].astype(str) + '%<br>₹' + df_h['LTP'].astype(str)
         fig_tree = px.treemap(df_h, path=[px.Constant("NSE FNO"), 'SECTOR', 'LABEL'], values='SIZE', color='CHANGE',
                               color_continuous_scale=[(0, "#d50000"), (0.5, "#1e222d"), (1, "#00c853")], range_color=[-3, 3])
@@ -250,8 +379,11 @@ elif menu == "📊 Sector Heatmap":
 
 elif menu == "📰 NEWS - 87 Sources":
     st.title("📰 LIVE NEWS - 87 Sources")
-    if st.button("🔄 REFRESH NEWS", type="primary"): st.cache_data.clear()
-    news_data = fetch_news(); total = sum(len(v) for v in news_data.values())
+    if st.button("🔄 REFRESH NEWS", type="primary"):
+        st.cache_data.clear()
+        st.rerun()
+    news_data = fetch_news()
+    total = sum(len(v) for v in news_data.values())
     st.success(f"Live • {total} headlines • {datetime.now(IST).strftime('%H:%M:%S')} IST")
     cats = list(RSS_FEEDS.keys())
     for i in range(0, len(cats), 3):
@@ -268,22 +400,19 @@ elif menu == "📰 NEWS - 87 Sources":
                             st.markdown(f"[{n['TITLE']}]({n['LINK']})")
                             st.divider()
 
-# ================= FIXED 5 MIN CANDLE REFRESH =================
 now = datetime.now(IST)
-next_min = ((now.minute // 5) + 1) * 5
-next_time = now.replace(second=0, microsecond=0)
-if next_min >= 60:
-    next_time = next_time.replace(minute=0) + timedelta(hours=1)
-else:
-    next_time = next_time.replace(minute=next_min)
-remaining = (next_time - now).total_seconds()
-
-if 9 <= now.hour < 16 and now.weekday() < 5:
-    if now.hour == 15 and now.minute > 30:
-        st.markdown(f"<p style='text-align:center;color:gray;font-size:12px;margin-top:20px'>Market Closed | {now.strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
+is_market_hours = 9 <= now.hour < 16 and now.weekday() < 5 and not (now.hour == 15 and now.minute > 30)
+if is_market_hours:
+    next_min = ((now.minute // 5) + 1) * 5
+    next_time = now.replace(second=0, microsecond=0)
+    if next_min >= 60:
+        next_time = next_time.replace(minute=0) + timedelta(hours=1)
     else:
-        st.markdown(f"<p style='text-align:center;color:#00d084;font-size:13px;margin-top:25px'>⏰ Next: {next_time.strftime('%H:%M')} ({int(remaining)}s) | Last: {now.strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
-        time.sleep(max(1, remaining))
+        next_time = next_time.replace(minute=next_min)
+    remaining = (next_time - now).total_seconds()
+    st.markdown(f"<p style='text-align:center;color:#00d084;font-size:13px;margin-top:25px'>⏰ Next: {next_time.strftime('%H:%M')} ({int(remaining)}s) | Last: {now.strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
+    if st.session_state.get('df_u') is not None:
+        time.sleep(max(1, min(remaining, 30)))
         st.rerun()
 else:
     st.markdown(f"<p style='text-align:center;color:gray;font-size:12px;margin-top:20px'>Market Closed | {now.strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
