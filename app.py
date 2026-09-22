@@ -14,7 +14,10 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.patches import Rectangle
+from streamlit_autorefresh import st_autorefresh
 
+# 5 min = 5 * 60 * 1000 = 300000 ms
+st_autorefresh(interval=300000, key="auto_refresh")
 st.set_page_config(page_title="TradingPro FINAL", layout="wide", initial_sidebar_state="expanded")
 IST = pytz.timezone('Asia/Kolkata')
 
