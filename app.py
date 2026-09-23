@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.patches import Rectangle
 
-st.set_page_config(page_title="TradingPro SAME DESIGN", layout="wide")
+st.set_page_config(page_title="TradingPro SAME DESIGN + Auto 5min", layout="wide")
 IST = pytz.timezone('Asia/Kolkata')
 
 st.markdown("""
@@ -192,6 +192,19 @@ with st.sidebar:
 
 if menu == "FNO Scanner - 1%":
     st.title("FNO BODY - LOW/HIGH 1%")
+    # === AUTO SCAN 5 MIN - NEW ===
+    auto_fno = st.checkbox("🔄 Auto Scan har 5 minute me", value=False, key="auto_fno")
+    if auto_fno:
+        st.markdown("⏰ Auto Scan ON - har 5 min me khud scan hoga")
+        st_autorefresh = st.empty()
+        # 5 min = 300000 ms
+        from streamlit_autorefresh import st_autorefresh as auto_ref
+        auto_ref(interval=5*60*1000, key="fno_autorefresh")
+        # auto scan trigger
+        df_u, df_d, last_dt = scan_fno()
+        st.session_state['df_u']=df_u; st.session_state['df_d']=df_d; st.session_state['last_dt']=last_dt
+        st.caption(f"Last Auto Scan: {datetime.now(IST).strftime('%H:%M:%S')}")
+    # ===
     if st.button("SCAN NOW", type="primary", use_container_width=True):
         df_u, df_d, last_dt = scan_fno()
         st.session_state['df_u']=df_u; st.session_state['df_d']=df_d; st.session_state['last_dt']=last_dt
@@ -243,7 +256,6 @@ elif menu == "Sector Heatmap - SAME DESIGN":
         sec_perf = df_h.groupby('SECTOR')['CHANGE'].mean().reset_index().sort_values('CHANGE', ascending=False)
         sec_perf['LABEL'] = sec_perf['CHANGE'].apply(lambda x: f"{'+' if x>=0 else ''}{x:.2f}%")
         sec_perf['COLOR'] = sec_perf['CHANGE'].apply(lambda x: '#00CB53' if x>=0 else '#D50000')
-        # BAR CHART - SAME AS PICTURE
         fig = px.bar(sec_perf, x='SECTOR', y='CHANGE', text='LABEL', color='COLOR', color_discrete_map={'#00CB53':'#00CB53','#D50000':'#D50000'})
         fig.update_traces(textposition='outside', textfont=dict(size=13, color='white', family='Arial Black'), marker_line_width=0)
         fig.update_layout(plot_bgcolor='#0e121b', paper_bgcolor='#0e121b', font=dict(color='white'), showlegend=False, height=450, margin=dict(t=30,b=30), yaxis=dict(gridcolor='#1e2a3e', title='Change (%)'), xaxis=dict(title=''))
@@ -254,13 +266,10 @@ elif menu == "Sector Heatmap - SAME DESIGN":
         if clicked:
             selected_sector = clicked[0].get('x')
             st.success(f"Selected Sector: {selected_sector}")
-        # HEATMAP BOXES - SAME AS PICTURE - HTML CARDS
         st.divider()
-        # Filter
         df_show = df_h.copy()
         if selected_sector:
             df_show = df_show[df_show['SECTOR']==selected_sector]
-        # Group by sector
         for sec in sorted(df_show['SECTOR'].unique()):
             sec_df = df_show[df_show['SECTOR']==sec].sort_values('CHANGE', ascending=False)
             avg = sec_df['CHANGE'].mean()
@@ -273,7 +282,6 @@ elif menu == "Sector Heatmap - SAME DESIGN":
                 with col:
                     st.markdown(f"<div class='sector-box' style='background:{bg}'>{row['SYM']}<br>{'+' if row['CHANGE']>=0 else ''}{row['CHANGE']}% {arrow}<br>₹{row['LTP']:,.0f}</div>", unsafe_allow_html=True)
         st.divider()
-        # Full table also
         if selected_sector:
             st.markdown(f"### {selected_sector} - All Stocks")
             st.dataframe(df_h[df_h['SECTOR']==selected_sector].sort_values('CHANGE', ascending=False), use_container_width=True)
@@ -283,6 +291,16 @@ elif menu == "Sector Heatmap - SAME DESIGN":
 
 elif menu == "Booster Scanner - FNO Only":
     st.title("Booster BODY - LONG vs SHORT + CHART")
+    # === AUTO SCAN 5 MIN - NEW ===
+    auto_boost = st.checkbox("🔄 Auto Scan har 5 minute me", value=False, key="auto_boost")
+    if auto_boost:
+        st.markdown("⏰ Auto Scan ON - har 5 min me khud scan hoga")
+        from streamlit_autorefresh import st_autorefresh as auto_ref
+        auto_ref(interval=5*60*1000, key="boost_autorefresh")
+        cards = scan_booster_fno()
+        st.session_state['booster_cards']=cards
+        st.caption(f"Last Auto Scan: {datetime.now(IST).strftime('%H:%M:%S')}")
+    # ===
     if st.button("SCAN BOOSTER - FNO BODY", type="primary", use_container_width=True):
         cards = scan_booster_fno()
         st.session_state['booster_cards']=cards
