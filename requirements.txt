@@ -6,3 +6,4 @@ pytz
 plotly
 streamlit-plotly-events
 matplotlib
+streamlit-autorefresh
