@@ -2,8 +2,7 @@ streamlit
 yfinance
 pandas
 feedparser
+pytz
 plotly
 streamlit-plotly-events
 matplotlib
-pytz
-streamlit-autorefresh
