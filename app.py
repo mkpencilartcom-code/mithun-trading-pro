@@ -163,9 +163,25 @@ def scan_fno():
         bar.progress((i+1)/len(FNO))
     bar.empty();return pd.DataFrame(up),pd.DataFrame(down)
 
+def get_sector_perf():
+    tmp=[]
+    for sym in FNO:
+        try:
+            t=yf.Ticker(f"{sym}.NS")
+            c=float(t.fast_info['last_price']); prev=float(t.fast_info['previous_close'])
+            if prev==0: continue
+            ch=(c-prev)/prev*100
+            tmp.append({"SYM":sym,"SECTOR":SECTOR_MAP_FULL.get(sym,"Others"),"CHANGE":ch})
+        except: continue
+    if tmp:
+        df=pd.DataFrame(tmp)
+        return df.groupby('SECTOR')['CHANGE'].mean().to_dict()
+    return {}
+
 def scan_booster_fno():
     cards=[]
-    bar=st.progress(0,text="Booster BODY Scanning...")
+    sector_perf=get_sector_perf()
+    bar=st.progress(0,text="Booster BODY Scanning + Sector Filter...")
     for i,sym in enumerate(FNO):
         try:
             df=yf.Ticker(f"{sym}.NS").history(period="2d",interval="5m",auto_adjust=True)
@@ -185,10 +201,14 @@ def scan_booster_fno():
             if not (0.5 < range_pct < 2.0): bar.progress((i+1)/len(FNO));continue
             is_long=ltp>or_h*1.002;is_short=ltp<or_l*0.998
             if not (is_long or is_short): bar.progress((i+1)/len(FNO));continue
+            sec=SECTOR_MAP_FULL.get(sym,"Others")
+            sec_avg=sector_perf.get(sec,0)
+            if is_long and sec_avg<=0: bar.progress((i+1)/len(FNO));continue
+            if is_short and sec_avg>=0: bar.progress((i+1)/len(FNO));continue
             entry=or_h if is_long else or_l;sl=or_l if is_long else or_h
             t1=entry+or_range*0.40 if is_long else entry-or_range*0.40
             t2=entry+or_range*0.85 if is_long else entry-or_range*0.85
-            cards.append({"SYM":sym,"LTP":ltp,"ENTRY":entry,"SL":sl,"T1":t1,"T2":t2,"RANGE":range_pct,"TYPE":"Long Breakout" if is_long else "Short Breakdown","SECTOR":SECTOR_MAP_FULL.get(sym,"Others")})
+            cards.append({"SYM":sym,"LTP":ltp,"ENTRY":entry,"SL":sl,"T1":t1,"T2":t2,"RANGE":range_pct,"TYPE":"Long Breakout" if is_long else "Short Breakdown","SECTOR":sec,"SEC_AVG":round(sec_avg,2)})
         except: pass
         bar.progress((i+1)/len(FNO))
     bar.empty();return cards
@@ -242,15 +262,14 @@ if menu=="FNO Scanner - 1%":
 
 elif menu=="Sector Heatmap - SAME DESIGN":
     st.markdown("### NSE INDIA — STOCK MARKET HEATMAP")
-    st.caption(f"NSE • {datetime.now(IST).strftime('%d %b %Y • %H:%M IST')} • Day Change (%) - fast_info fix")
+    st.caption(f"NSE • {datetime.now(IST).strftime('%d %b %Y • %H:%M IST')} • Day Change (%) - fast_info")
     if st.button("GENERATE SAME DESIGN",type="primary",use_container_width=True):
-        heat_data=[];bar=st.progress(0,text="Heatmap loading - fast_info...")
+        heat_data=[];bar=st.progress(0,text="Heatmap loading...")
         for i,sym in enumerate(FNO):
             try:
-                t = yf.Ticker(f"{sym}.NS")
+                t=yf.Ticker(f"{sym}.NS")
                 try:
-                    c = float(t.fast_info['last_price'])
-                    prev = float(t.fast_info['previous_close'])
+                    c=float(t.fast_info['last_price']); prev=float(t.fast_info['previous_close'])
                 except:
                     d=t.history(period="2d",auto_adjust=False)
                     if len(d)<2: continue
@@ -260,9 +279,7 @@ elif menu=="Sector Heatmap - SAME DESIGN":
                 heat_data.append({"SYM":sym,"SECTOR":SECTOR_MAP_FULL.get(sym,"Others"),"CHANGE":round(ch,2),"LTP":round(c,2),"SIZE":1})
             except: continue
             bar.progress((i+1)/len(FNO))
-        bar.empty()
-        st.session_state['df_h']=pd.DataFrame(heat_data)
-        st.success(f"{len(heat_data)} stocks loaded")
+        bar.empty();st.session_state['df_h']=pd.DataFrame(heat_data);st.success(f"{len(heat_data)} loaded")
     if 'df_h' in st.session_state and not st.session_state['df_h'].empty:
         df_h=st.session_state['df_h']
         sec_perf=df_h.groupby('SECTOR')['CHANGE'].mean().reset_index().sort_values('CHANGE',ascending=False)
@@ -289,8 +306,8 @@ elif menu=="Sector Heatmap - SAME DESIGN":
                 with cols[idx % 5]: st.markdown(f"<div class='sector-box' style='background:{bg}'>{row['SYM']}<br>{row['CHANGE']}%<br>₹{row['LTP']:,.0f}</div>",unsafe_allow_html=True)
 
 elif menu=="Booster Scanner - FNO Only":
-    st.title("Booster BODY - LONG vs SHORT + CHART")
-    st.caption(f"Scanner Time Lock ON - File me save | Date: {today_str}")
+    st.title("Booster BODY - LONG vs SHORT + Sector Filter + CHART")
+    st.caption(f"Long=Green Sector Only | Short=Red Sector Only | Date: {today_str}")
     auto_boost=st.checkbox("Auto Scan har 5 minute me (FIX 9:15,9:20,9:25)",value=False,key="auto_boost")
     def do_booster_scan():
         fresh=scan_booster_fno();locked=st.session_state['booster_locked'];cur_t=datetime.now(IST).strftime("%H:%M")
@@ -315,17 +332,17 @@ elif menu=="Booster Scanner - FNO Only":
         cards_sorted=sorted(cards,key=sort_key)
         long_cards=[x for x in cards_sorted if "Long" in x['TYPE']]
         short_cards=[x for x in cards_sorted if "Short" in x['TYPE']]
-        st.success(f"Total: {len(cards_sorted)} | LONG: {len(long_cards)} | SHORT: {len(short_cards)}")
+        st.success(f"Total: {len(cards_sorted)} | LONG (Green Sec): {len(long_cards)} | SHORT (Red Sec): {len(short_cards)}")
         cL,cS=st.columns(2)
         with cL:
-            st.markdown(f"### LONG BODY - {len(long_cards)}")
+            st.markdown(f"### LONG BODY - Green Sector - {len(long_cards)}")
             for c in long_cards:
-                st.markdown(f"<div style='background:white;color:black;padding:12px;border-radius:12px;margin:8px 0;border-left:6px solid #00c853'><b>{c['SYM']} LONG ⏰ {c.get('SCANNER_TIME')}</b><br>LTP {c['LTP']:.2f} ENTRY {c['ENTRY']:.2f} SL {c['SL']:.2f} T2 {c['T2']:.2f}</div>",unsafe_allow_html=True)
+                st.markdown(f"<div style='background:white;color:black;padding:12px;border-radius:12px;margin:8px 0;border-left:6px solid #00c853'><b>{c['SYM']} LONG ⏰ {c.get('SCANNER_TIME')}</b><br>Sector {c['SECTOR']} ({c.get('SEC_AVG',0)}%) | LTP {c['LTP']:.2f} ENTRY {c['ENTRY']:.2f} SL {c['SL']:.2f} T2 {c['T2']:.2f}</div>",unsafe_allow_html=True)
                 draw_half_chart(c['SYM'],f"SCANNER {c.get('SCANNER_TIME')} {c['TYPE']}")
         with cS:
-            st.markdown(f"### SHORT BODY - {len(short_cards)}")
+            st.markdown(f"### SHORT BODY - Red Sector - {len(short_cards)}")
             for c in short_cards:
-                st.markdown(f"<div style='background:white;color:black;padding:12px;border-radius:12px;margin:8px 0;border-left:6px solid #d50000'><b>{c['SYM']} SHORT ⏰ {c.get('SCANNER_TIME')}</b><br>LTP {c['LTP']:.2f} ENTRY {c['ENTRY']:.2f} SL {c['SL']:.2f} T2 {c['T2']:.2f}</div>",unsafe_allow_html=True)
+                st.markdown(f"<div style='background:white;color:black;padding:12px;border-radius:12px;margin:8px 0;border-left:6px solid #d50000'><b>{c['SYM']} SHORT ⏰ {c.get('SCANNER_TIME')}</b><br>Sector {c['SECTOR']} ({c.get('SEC_AVG',0)}%) | LTP {c['LTP']:.2f} ENTRY {c['ENTRY']:.2f} SL {c['SL']:.2f} T2 {c['T2']:.2f}</div>",unsafe_allow_html=True)
                 draw_half_chart(c['SYM'],f"SCANNER {c.get('SCANNER_TIME')} {c['TYPE']}")
     else: st.info("SCAN dabao")
 
