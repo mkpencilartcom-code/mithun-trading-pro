@@ -181,7 +181,7 @@ def get_sector_perf():
 def scan_booster_fno():
     cards=[]
     sector_perf=get_sector_perf()
-    bar=st.progress(0,text="Booster BODY Scanning + Sector Filter...")
+    bar=st.progress(0,text="Booster BODY Scanning...")
     for i,sym in enumerate(FNO):
         try:
             df=yf.Ticker(f"{sym}.NS").history(period="2d",interval="5m",auto_adjust=True)
@@ -203,11 +203,20 @@ def scan_booster_fno():
             if not (is_long or is_short): bar.progress((i+1)/len(FNO));continue
             sec=SECTOR_MAP_FULL.get(sym,"Others")
             sec_avg=sector_perf.get(sec,0)
-            if is_long and sec_avg<=0: bar.progress((i+1)/len(FNO));continue
-            if is_short and sec_avg>=0: bar.progress((i+1)/len(FNO));continue
-            entry=or_h if is_long else or_l;sl=or_l if is_long else or_h
-            t1=entry+or_range*0.40 if is_long else entry-or_range*0.40
-            t2=entry+or_range*0.85 if is_long else entry-or_range*0.85
+            if sec_avg>0 and not is_long: bar.progress((i+1)/len(FNO));continue
+            if sec_avg<0 and not is_short: bar.progress((i+1)/len(FNO));continue
+            if sec_avg==0: bar.progress((i+1)/len(FNO));continue
+            # PHOTO FORMULA
+            if is_long:
+                entry=or_h
+                sl=or_l*0.999
+                t1=entry+or_range*0.40
+                t2=entry+or_range*0.90
+            else:
+                entry=or_l
+                sl=or_h*1.001
+                t1=entry-or_range*0.40
+                t2=entry-or_range*0.90
             cards.append({"SYM":sym,"LTP":ltp,"ENTRY":entry,"SL":sl,"T1":t1,"T2":t2,"RANGE":range_pct,"TYPE":"Long Breakout" if is_long else "Short Breakdown","SECTOR":sec,"SEC_AVG":round(sec_avg,2)})
         except: pass
         bar.progress((i+1)/len(FNO))
@@ -337,12 +346,12 @@ elif menu=="Booster Scanner - FNO Only":
         with cL:
             st.markdown(f"### LONG BODY - Green Sector - {len(long_cards)}")
             for c in long_cards:
-                st.markdown(f"<div style='background:white;color:black;padding:12px;border-radius:12px;margin:8px 0;border-left:6px solid #00c853'><b>{c['SYM']} LONG ⏰ {c.get('SCANNER_TIME')}</b><br>Sector {c['SECTOR']} ({c.get('SEC_AVG',0)}%) | LTP {c['LTP']:.2f} ENTRY {c['ENTRY']:.2f} SL {c['SL']:.2f} T2 {c['T2']:.2f}</div>",unsafe_allow_html=True)
+                st.markdown(f"<div style='background:white;color:black;padding:12px;border-radius:12px;margin:8px 0;border-left:6px solid #00c853'><b>{c['SYM']} LONG ⏰ {c.get('SCANNER_TIME')}</b><br>Sector {c['SECTOR']} ({c.get('SEC_AVG',0)}%) | LTP {c['LTP']:.2f} ENTRY {c['ENTRY']:.2f} SL {c['SL']:.2f} T1 {c['T1']:.2f} T2 {c['T2']:.2f}</div>",unsafe_allow_html=True)
                 draw_half_chart(c['SYM'],f"SCANNER {c.get('SCANNER_TIME')} {c['TYPE']}")
         with cS:
             st.markdown(f"### SHORT BODY - Red Sector - {len(short_cards)}")
             for c in short_cards:
-                st.markdown(f"<div style='background:white;color:black;padding:12px;border-radius:12px;margin:8px 0;border-left:6px solid #d50000'><b>{c['SYM']} SHORT ⏰ {c.get('SCANNER_TIME')}</b><br>Sector {c['SECTOR']} ({c.get('SEC_AVG',0)}%) | LTP {c['LTP']:.2f} ENTRY {c['ENTRY']:.2f} SL {c['SL']:.2f} T2 {c['T2']:.2f}</div>",unsafe_allow_html=True)
+                st.markdown(f"<div style='background:white;color:black;padding:12px;border-radius:12px;margin:8px 0;border-left:6px solid #d50000'><b>{c['SYM']} SHORT ⏰ {c.get('SCANNER_TIME')}</b><br>Sector {c['SECTOR']} ({c.get('SEC_AVG',0)}%) | LTP {c['LTP']:.2f} ENTRY {c['ENTRY']:.2f} SL {c['SL']:.2f} T1 {c['T1']:.2f} T2 {c['T2']:.2f}</div>",unsafe_allow_html=True)
                 draw_half_chart(c['SYM'],f"SCANNER {c.get('SCANNER_TIME')} {c['TYPE']}")
     else: st.info("SCAN dabao")
 
