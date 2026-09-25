@@ -45,7 +45,6 @@ st.markdown("""
 
 FNO = ["360ONE","ABB","APLAPOLLO","AUBANK","ADANIENSOL","ADANIENT","ADANIGREEN","ADANIPORTS","ADANIPOWER","ABCAPITAL","ALKEM","AMBER","AMBUJACEM","ANGELONE","APOLLOHOSP","ASHOKLEY","ASIANPAINT","ASTRAL","ATHERENERG","AUROPHARMA","DMART","AXISBANK","BSE","BAJAJ-AUTO","BAJFINANCE","BAJAJFINSV","BAJAJHLDNG","BANDHANBNK","BANKBARODA","BANKINDIA","MAHABANK","BDL","BEL","BHARATFORG","BHEL","BPCL","BHARTIARTL","BIOCON","BLUESTARCO","BOSCHLTD","BRITANNIA","CGPOWER","CANBK","CDSL","CHOLAFIN","CIPLA","COALINDIA","COCHINSHIP","COFORGE","COLPAL","CAMS","CONCOR","CROMPTON","CUMMINSIND","DLF","DABUR","DELHIVERY","DIVISLAB","DIXON","DRREDDY","ETERNAL","EICHERMOT","FORCEMOT","NYKAA","FORTIS","GAIL","GVT&D","GMRAIRPORT","GLENMARK","GODFRYPHLP","GODREJCP","GODREJPROP","GRASIM","HCLTECH","HDFCAMC","HDFCBANK","HDFCLIFE","HAVELLS","HEROMOTOCO","HINDALCO","HAL","HINDPETRO","HINDUNILVR","HINDZINC","POWERINDIA","HYUNDAI","ICICIBANK","ICICIGI","ICICIPRULI","IDFCFIRSTB","ITC","INDIANB","IEX","IOC","IRFC","IREDA","INDUSTOWER","INDUSINDBK","NAUKRI","INFY","INOXWIND","INDIGO","JINDALSTEL","JSWENERGY","JSWSTEEL","JIOFIN","JUBLFOOD","KEI","KPITTECH","KALYANKJIL","KAYNES","KFINTECH","KOTAKBANK","LTF","LICHSGFIN","LTM","LT","LAURUSLABS","LICI","LODHA","LUPIN","M&M","MANAPPURAM","MANKIND","MARICO","MARUTI","MFSL","MAXHEALTH","MAZDOCK","MOTILALOFS","MPHASIS","MCX","MUTHOOTFIN","NBCC","NHPC","NMDC","NTPC","NATIONALUM","NESTLEIND","NAM-INDIA","OBEROIRLTY","ONGC","OIL","PAYTM","OFSS","POLICYBZR","PGEL","PIIND","PNBHOUSING","PAGEIND","PATANJALI","PERSISTENT","PETRONET","PIDILITIND","POLYCAB","PFC","POWERGRID","PREMIERENE","PRESTIGE","PNB","RBLBANK","RECLTD","RADICO","RVNL","RELIANCE","SAGILITY","SBICARD","SBILIFE","SHREECEM","SRF","MOTHERSON","SHRIRAMFIN","SIEMENS","SOLARINDS","SONACOMS","SBIN","SAIL","SUNPHARMA","SUPREMEIND","SUZLON","SWIGGY","TATACONSUM","TVSMOTOR","TCS","TATAELXSI","TMPV","TATAPOWER","TATASTEEL","TECHM","FEDERALBNK","INDHOTEL","PHOENIXLTD","TITAN","TORNTPHARM","TRENT","TIINDIA","UNOMINDA","UPL","ULTRACEMCO","UNIONBANK","UNITDSPR","VBL","VEDL","VMM","IDEA","VOLTAS","WAAREEENER","WIPRO","YESBANK","ZYDUSLIFE"]
 
-# --- TUMHARI LIST KE HISAB SE UPDATED SECTOR MAP ---
 SECTOR_MAP_FULL = {
 "BRITANNIA":"FMCG","GODREJCP":"FMCG","NESTLEIND":"FMCG","DABUR":"FMCG","HINDUNILVR":"FMCG","PATANJALI":"FMCG","COLPAL":"FMCG","MARICO":"FMCG",
 "INOXWIND":"General Industrials","SUPREMEIND":"General Industrials","SOLARINDS":"General Industrials","POWERINDIA":"General Industrials","ASTRAL":"General Industrials","CGPOWER":"General Industrials","MAZDOCK":"General Industrials","SIEMENS":"General Industrials","HAL":"General Industrials","BHARATFORG":"General Industrials","BEL":"General Industrials","SUZLON":"General Industrials","BDL":"General Industrials","ABB":"General Industrials","BHEL":"General Industrials","CUMMINSIND":"General Industrials","GVT&D":"General Industrials",
@@ -243,18 +242,27 @@ if menu=="FNO Scanner - 1%":
 
 elif menu=="Sector Heatmap - SAME DESIGN":
     st.markdown("### NSE INDIA — STOCK MARKET HEATMAP")
-    st.caption(f"NSE • {datetime.now(IST).strftime('%d %b %Y • %H:%M IST')} • Day Change (%)")
+    st.caption(f"NSE • {datetime.now(IST).strftime('%d %b %Y • %H:%M IST')} • Day Change (%) - fast_info fix")
     if st.button("GENERATE SAME DESIGN",type="primary",use_container_width=True):
-        heat_data=[];bar=st.progress(0)
+        heat_data=[];bar=st.progress(0,text="Heatmap loading - fast_info...")
         for i,sym in enumerate(FNO):
             try:
-                d=yf.Ticker(f"{sym}.NS").history(period="5d",auto_adjust=True)
-                if len(d)<2: continue
-                c=float(d['Close'].iloc[-1]);prev=float(d['Close'].iloc[-2]);ch=(c-prev)/prev*100
+                t = yf.Ticker(f"{sym}.NS")
+                try:
+                    c = float(t.fast_info['last_price'])
+                    prev = float(t.fast_info['previous_close'])
+                except:
+                    d=t.history(period="2d",auto_adjust=False)
+                    if len(d)<2: continue
+                    c=float(d['Close'].iloc[-1]); prev=float(d['Close'].iloc[-2])
+                if prev==0: continue
+                ch=(c-prev)/prev*100
                 heat_data.append({"SYM":sym,"SECTOR":SECTOR_MAP_FULL.get(sym,"Others"),"CHANGE":round(ch,2),"LTP":round(c,2),"SIZE":1})
             except: continue
             bar.progress((i+1)/len(FNO))
-        bar.empty();st.session_state['df_h']=pd.DataFrame(heat_data)
+        bar.empty()
+        st.session_state['df_h']=pd.DataFrame(heat_data)
+        st.success(f"{len(heat_data)} stocks loaded")
     if 'df_h' in st.session_state and not st.session_state['df_h'].empty:
         df_h=st.session_state['df_h']
         sec_perf=df_h.groupby('SECTOR')['CHANGE'].mean().reset_index().sort_values('CHANGE',ascending=False)
