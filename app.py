@@ -72,7 +72,11 @@ if "token_map" in st.session_state:
     if "live_df" in st.session_state:
         df = st.session_state["live_df"]
         # Tumhara 1% wala logic
-        df["CHANGE"] = (df["LTP"]-df["CLOSE"])/df["CLOSE"]*100
+        if "CLOSE" in df.columns and "LTP" in df.columns:
+    df["CLOSE"] = pd.to_numeric(df["CLOSE"], errors='coerce').fillna(df["LTP"])
+    df["CHANGE"] = (df["LTP"]-df["CLOSE"])/df["CLOSE"]*100
+else:
+    df["CHANGE"] = 0.0
         st.dataframe(df.sort_values("CHANGE", ascending=False), use_container_width=True)
 else:
     st.info("Pehle Token Map download karo")
