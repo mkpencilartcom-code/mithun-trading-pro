@@ -1,84 +1,109 @@
 import streamlit as st
 import pandas as pd
-import pyotp
+import json, time, os, requests
 from SmartApi import SmartConnect
-from datetime import datetime, date
+import pyotp
+from datetime import datetime
 import pytz
-import json
-import requests
 
-st.set_page_config(page_title="Alpha Discovery - Angel Live", layout="wide")
-IST = pytz.timezone('Asia/Kolkata')
+st.set_page_config(page_title="Mithun Trading Pro", layout="wide")
+st.title("Mithun Trading Pro - Angel One Live")
 
-# ---------- ANGEL CONNECTION ----------
+# --- 1. LOGIN ---
+try:
+    API_KEY = st.secrets["API_KEY"]
+    CLIENT_ID = st.secrets["CLIENT_ID"]
+    MPIN = st.secrets["MPIN"]
+    TOTP_SECRET = st.secrets["TOTP_SECRET"]
+except:
+    st.error("Pehle Streamlit Cloud > Settings > Secrets me API_KEY, CLIENT_ID, MPIN, TOTP_SECRET dalo")
+    st.stop()
+
 @st.cache_resource
-def get_angel():
-    obj = SmartConnect(api_key=st.secrets["API_KEY"])
-    totp = pyotp.TOTP(st.secrets["TOTP_SECRET"]).now()
-    obj.generateSession(st.secrets["CLIENT_ID"], st.secrets["MPIN"], totp)
+def get_connection():
+    obj = SmartConnect(api_key=API_KEY)
+    totp = pyotp.TOTP(TOTP_SECRET).now()
+    data = obj.generateSession(CLIENT_ID, MPIN, totp)
     return obj
 
-# Tumhari FNO list
-FNO = ["RELIANCE","HDFCBANK","INFY","TCS","SBIN","ICICIBANK","AXISBANK","ITC","LT","TATAMOTORS"]
-# poori 200 wali list yaha paste kar lena tumhari purani wali
+try:
+    obj = get_connection()
+    st.success("Angel One se connected!")
+except Exception as e:
+    st.error(f"Login fail: {e}")
+    st.stop()
 
-@st.cache_data(ttl=86400)
-def build_token_map():
-    # Angel master json
-    url = "https://margincalculator.angelone.in/OpenAPI_File/files/OpenAPIScripMaster.json"
-    data = requests.get(url).json()
-    mp = {}
-    for d in data:
-        if d.get("exch_seg")=="NSE" and d.get("symbol") in FNO:
-            # symbol like RELIANCE-EQ
-            base = d["symbol"].replace("-EQ","")
-            if base in FNO:
-                mp[base] = d["token"]
-    return mp
+# --- 2. TOKEN MAP ---
+TOKEN_FILE = "token_map.json"
 
-def get_live_data(symbols, token_map):
-    obj = get_angel()
-    out = []
-    for sym in symbols:
-        token = token_map.get(sym)
-        if not token: continue
-        try:
-            q = obj.ltpData("NSE", sym, token)["data"]
-            out.append({
-                "SYM": sym,
-                "LTP": float(q["ltp"]),
-                "OPEN": float(q["open"]),
-                "HIGH": float(q["high"]),
-                "LOW": float(q["low"]),
-                "CLOSE": float(q["close"])
-            })
-        except: continue
-    return pd.DataFrame(out)
-
-# ---------- UI ----------
-st.title("Alpha Discovery - Angel One Live")
-
+st.header("Step 1: Token Map")
 if st.button("1. Pehli baar Token Map Download karo"):
-    tm = build_token_map()
-    st.session_state["token_map"] = tm
-    st.success(f"{len(tm)} tokens mil gaye!")
+    with st.spinner("Download ho raha hai..."):
+        url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+        data = requests.get(url).json()
+        token_map = {}
+        for item in data:
+            if item.get("exch_seg") == "NSE" and item.get("instrumenttype") in ["OPTSTK", "OPTIDX"]:
+                key = f"{item['name']}_{item['expiry']}_{item['strike']}_{item['symbol'].split()[-1]}"
+                token_map[key] = item["token"]
+        with open(TOKEN_FILE, "w") as f:
+            json.dump(token_map, f)
+        st.success(f"{len(token_map)} tokens mil gaye!")
 
-if "token_map" in st.session_state:
-    tm = st.session_state["token_map"]
-    if st.button("2. SCAN NOW - Live", type="primary"):
-        df = get_live_data(FNO, tm)
-        st.session_state["live_df"] = df
+# --- 3. LIVE SCAN ---
+st.header("Step 2: Live Scan")
 
-    if "live_df" in st.session_state:
-        df = st.session_state["live_df"]
-        # Tumhara 1% wala logic
-    if "CLOSE" in df.columns and "LTP" in df.columns:
-    df["CLOSE"] = pd.to_numeric(df["CLOSE"], errors='coerce').fillna(df["LTP"])
-    df["CHANGE"] = (df["LTP"] - df["CLOSE"]) / df["CLOSE"] * 100
-else:
-    df["CHANGE"] = 0.0
-else:
-    df["CHANGE"] = 0.0
-        st.dataframe(df.sort_values("CHANGE", ascending=False), use_container_width=True)
-else:
-    st.info("Pehle Token Map download karo")
+def get_ltp_batch(tokens):
+    try:
+        # Angel ka naya LTP API
+        params = {
+            "exchange": "NSE",
+            "tradingsymbol": "",
+            "symboltoken": ""
+        }
+        # Hum simple searchScrip use karenge
+        result = []
+        for exch, token in tokens[:50]: # pehle 50 ek saath
+            try:
+                ltp_data = obj.ltpData(exch, "NIFTY", token)
+                if ltp_data and "data" in ltp_data:
+                    d = ltp_data["data"]
+                    result.append({
+                        "TOKEN": token,
+                        "LTP": float(d.get("ltp", 0)),
+                        "CLOSE": float(d.get("close", d.get("ltp", 0))),
+                        "VOLUME": int(d.get("volume", 0))
+                    })
+            except:
+                continue
+        return pd.DataFrame(result)
+    except Exception as e:
+        st.error(f"LTP error: {e}")
+        return pd.DataFrame()
+
+if st.button("2. SCAN NOW - Live"):
+    if not os.path.exists(TOKEN_FILE):
+        st.warning("Pehle Step 1 wala button dabao")
+    else:
+        with open(TOKEN_FILE) as f:
+            token_map = json.load(f)
+
+        # Sample ke liye pehle 20 token lo, baad me poora laga dena
+        sample_tokens = list(token_map.items())[:20]
+        tokens_for_api = [("NFO", token) for name, token in sample_tokens]
+
+        df = get_ltp_batch(tokens_for_api)
+
+        if df.empty:
+            st.warning("Koi data nahi aaya. Market band ho sakta hai.")
+        else:
+            # YEHI WO FIX HAI
+            if "CLOSE" in df.columns and "LTP" in df.columns:
+                df["CLOSE"] = pd.to_numeric(df["CLOSE"], errors='coerce').fillna(df["LTP"])
+                df["CHANGE"] = (df["LTP"] - df["CLOSE"]) / df["CLOSE"] * 100
+            else:
+                df["CHANGE"] = 0.0
+
+            df = df.sort_values("CHANGE", ascending=False)
+            st.dataframe(df, use_container_width=True)
+            st.success("Scan poora hua!")
