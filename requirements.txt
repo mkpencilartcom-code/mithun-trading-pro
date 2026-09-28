@@ -1,5 +1,5 @@
 streamlit
-SmartApi-python
+smartapi-python
 pyotp
 pandas
 feedparser
@@ -8,3 +8,5 @@ plotly
 streamlit-plotly-events
 matplotlib
 streamlit-autorefresh
+logzero
+requests
