@@ -1,5 +1,6 @@
 streamlit
-yfinance
+SmartApi-python
+pyotp
 pandas
 feedparser
 pytz
