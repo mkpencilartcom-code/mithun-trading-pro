@@ -110,24 +110,28 @@ def draw_half_chart(symbol, pct_info=""):
 
 def scan_fno():
     up,down=[],[]
-    bar=st.progress(0,text="Scanning FNO LOW/HIGH...")
+    bar=st.progress(0,text="Scanning FNO TOP 10...")
     for i,sym in enumerate(FNO):
         try:
             d=yf.Ticker(f"{sym}.NS").history(period="5d",auto_adjust=True)
             if d.empty: continue
-            day_low=float(d['Low'].iloc[-1])
-            day_high=float(d['High'].iloc[-1])
-            c=float(d['Close'].iloc[-1])
-            o=float(d['Open'].iloc[-1])
-            if day_low==0 or day_high==0: continue
-            low_up=(c-day_low)/day_low*100
-            high_down=(day_high-c)/day_high*100
-            if low_up>=1: up.append({"SYM":sym,"OPEN":round(o,2),"DAY_LOW":round(day_low,2),"LTP":round(c,2),"LOW_UP %":round(low_up,2)})
-            if high_down>=1: down.append({"SYM":sym,"OPEN":round(o,2),"DAY_HIGH":round(day_high,2),"LTP":round(c,2),"HIGH_DOWN %":round(high_down,2)})
+            o=float(d['Open'].iloc[-1]); c=float(d['Close'].iloc[-1])
+            bl=min(o,c); bh=max(o,c)
+            if bl==0 or bh==0: continue
+            lu=(c-bl)/bl*100; hd=(bh-c)/bh*100
+            if lu>=1: up.append({"SYM":sym,"OPEN":round(o,2),"BODY_LOW":round(bl,2),"LTP":round(c,2),"LOW_UP %":round(lu,2)})
+            if hd>=1: down.append({"SYM":sym,"OPEN":round(o,2),"BODY_HIGH":round(bh,2),"LTP":round(c,2),"HIGH_DOWN %":round(hd,2)})
         except: pass
         bar.progress((i+1)/len(FNO))
     bar.empty()
-    return pd.DataFrame(up),pd.DataFrame(down)
+    df_up = pd.DataFrame(up)
+    df_down = pd.DataFrame(down)
+    # TOP 10 ONLY
+    if not df_up.empty:
+        df_up = df_up.sort_values("LOW_UP %", ascending=False).head(10)
+    if not df_down.empty:
+        df_down = df_down.sort_values("HIGH_DOWN %", ascending=False).head(10)
+    return df_up, df_down
 
 def scan_booster_fno():
     cards=[]; bar=st.progress(0,text="Booster BODY Scanning...")
@@ -181,7 +185,7 @@ with st.sidebar:
     st.info(f"Abhi: {now_ist.strftime('%H:%M:%S')} Agla auto: {next_slot.strftime('%H:%M')}")
 
 if menu=="FNO Scanner - 1%":
-    st.title("FNO DAY LOW/HIGH - 1%")
+    st.title("FNO BODY - TOP 10 LOW/HIGH 1%")
     auto_fno=st.checkbox("Auto Scan har 5 minute me (FIX 9:15,9:20,9:25)",value=False,key="auto_fno")
     if auto_fno:
         st_autorefresh(interval=ms_to_next,key="fno_autorefresh_fix")
@@ -195,10 +199,10 @@ if menu=="FNO Scanner - 1%":
         df_u=st.session_state['df_u']; df_d=st.session_state['df_d']
         c1,c2=st.columns(2)
         with c1:
-            st.markdown(f"### DAY LOW se UP: {len(df_u)}")
+            st.markdown(f"### BODY LOW se UP - TOP 10: {len(df_u)}")
             st.dataframe(df_u.sort_values("LOW_UP %",ascending=False),use_container_width=True)
         with c2:
-            st.markdown(f"### DAY HIGH se DOWN: {len(df_d)}")
+            st.markdown(f"### BODY HIGH se DOWN - TOP 10: {len(df_d)}")
             st.dataframe(df_d.sort_values("HIGH_DOWN %",ascending=False),use_container_width=True)
         up_syms=df_u.sort_values("LOW_UP %",ascending=False)['SYM'].tolist() if not df_u.empty else []
         down_syms=df_d.sort_values("HIGH_DOWN %",ascending=False)['SYM'].tolist() if not df_d.empty else []
@@ -208,13 +212,13 @@ if menu=="FNO Scanner - 1%":
             if i < len(up_syms):
                 sym=up_syms[i]; pct=df_u[df_u['SYM']==sym]['LOW_UP %'].values[0]
                 with cl:
-                    st.markdown(f"**{sym} DAY LOW +{pct}%**")
-                    draw_half_chart(sym,f"DAY LOW +{pct}%")
+                    st.markdown(f"**{sym} BODY LOW +{pct}%**")
+                    draw_half_chart(sym,f"BODY LOW +{pct}%")
             if i < len(down_syms):
                 sym=down_syms[i]; pct=df_d[df_d['SYM']==sym]['HIGH_DOWN %'].values[0]
                 with cr:
-                    st.markdown(f"**{sym} DAY HIGH -{pct}%**")
-                    draw_half_chart(sym,f"DAY HIGH -{pct}%")
+                    st.markdown(f"**{sym} BODY HIGH -{pct}%**")
+                    draw_half_chart(sym,f"BODY HIGH -{pct}%")
 
 elif menu=="Sector Heatmap - SAME DESIGN":
     st.markdown("### NSE INDIA — STOCK MARKET HEATMAP")
