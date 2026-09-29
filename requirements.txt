@@ -1,6 +1,5 @@
 streamlit
-smartapi-python
-pyotp
+yfinance
 pandas
 feedparser
 pytz
@@ -8,6 +7,3 @@ plotly
 streamlit-plotly-events
 matplotlib
 streamlit-autorefresh
-logzero
-requests
-websocket-client
