@@ -217,11 +217,13 @@ def do_reversal_scan_lock():
     locked = st.session_state['rev_locked']
     cur_t = datetime.now(IST).strftime("%H:%M")
     for _, r in fresh_l.iterrows():
-        if r['SYM'] not in locked:
-            d=r.to_dict(); d['SCANNER_TIME']=cur_t; locked[r['SYM']]=d
+        key = f"{r['SYM']}_Long"
+        if key not in locked:
+            d=r.to_dict(); d['SCANNER_TIME']=cur_t; locked[key]=d
     for _, r in fresh_s.iterrows():
-        if r['SYM'] not in locked:
-            d=r.to_dict(); d['SCANNER_TIME']=cur_t; locked[r['SYM']]=d
+        key = f"{r['SYM']}_Short"
+        if key not in locked:
+            d=r.to_dict(); d['SCANNER_TIME']=cur_t; locked[key]=d
     st.session_state['rev_locked']=locked
 
 @st.cache_data(ttl=90)
@@ -293,55 +295,3 @@ elif menu=="Booster Scanner - FNO Only":
         cL,cS=st.columns(2)
         with cL:
             for c in long_cards:
-                st.markdown(f"**{c['SYM']} LONG ⏰ {c.get('SCANNER_TIME','--:--')}**")
-                draw_half_chart(c['SYM'],f"{c['TYPE']}",ref_level=c['ENTRY'])
-        with cS:
-            for c in short_cards:
-                st.markdown(f"**{c['SYM']} SHORT ⏰ {c.get('SCANNER_TIME','--:--')}**")
-                draw_half_chart(c['SYM'],f"{c['TYPE']}",ref_level=c['ENTRY'])
-
-elif menu=="Reversal 3-4 Scanner":
-    st.title("Reversal - 3+ Red/Green LOCK + Red Line")
-    st.caption(f"Lock ON | Date: {today_str}")
-    auto_rev=st.checkbox("Auto Scan har 5 minute me",value=False,key="auto_rev")
-    if auto_rev:
-        st_autorefresh(interval=ms_to_next,key="rev_autorefresh_fix")
-        do_reversal_scan_lock()
-    if st.button("SCAN REVERSAL",type="primary",use_container_width=True):
-        do_reversal_scan_lock()
-    locked=list(st.session_state['rev_locked'].values())
-    if locked:
-        def sk(c):
-            try: h,m=map(int,str(c.get('SCANNER_TIME','15:30')).split(':')); return h*60+m
-            except: return 9999
-        locked=sorted(locked,key=sk)
-        long_c=[x for x in locked if x['TYPE']=="Long"]; short_c=[x for x in locked if x['TYPE']=="Short"]
-        st.success(f"Total LOCKED: {len(locked)} | LONG: {len(long_c)} | SHORT: {len(short_c)}")
-        c1,c2=st.columns(2)
-        with c1:
-            st.markdown(f"### LONG LOCKED - {len(long_c)}")
-            for r in long_c:
-                st.markdown(f"<div style='background:white;color:black;padding:12px;border-radius:12px;margin:8px 0;border-left:6px solid #00c853'><b>{r['SYM']} LONG ⏰ {r.get('SCANNER_TIME','--:--')} ({r.get('REDS','?')} red)</b><br>LTP {r['LTP']} REF_LOW {r['REF_LOW']}</div>",unsafe_allow_html=True)
-                draw_half_chart(r['SYM'], f"LONG {r.get('SCANNER_TIME','')} Breakout {r['REF_LOW']}", ref_level=r['REF_LOW'])
-        with c2:
-            st.markdown(f"### SHORT LOCKED - {len(short_c)}")
-            for r in short_c:
-                st.markdown(f"<div style='background:white;color:black;padding:12px;border-radius:12px;margin:8px 0;border-left:6px solid #d50000'><b>{r['SYM']} SHORT ⏰ {r.get('SCANNER_TIME','--:--')} ({r.get('GREENS','?')} green)</b><br>LTP {r['LTP']} REF_OPEN {r['REF_OPEN']}</div>",unsafe_allow_html=True)
-                draw_half_chart(r['SYM'], f"SHORT {r.get('SCANNER_TIME','')} Breakdown {r['REF_OPEN']}", ref_level=r['REF_OPEN'])
-    else:
-        st.info("Abhi khali hai. SCAN dabao.")
-
-elif menu=="NEWS - 87 Sources":
-    st.title("LIVE NEWS - 87 Sources")
-    if st.button("REFRESH NEWS",type="primary"):
-        st.cache_data.clear(); st.rerun()
-    news_data=fetch_news()
-    c1,c2,c3=st.columns(3); cols=[c1,c2,c3]; idx=0
-    for cat,lst in news_data.items():
-        with cols[idx%3]:
-            html=f"<div class='news-wrapper'><div class='news-header'>{cat}</div>"
-            for n in lst[:15]:
-                html+=f"<div class='news-card-black'><b>{n['TIME']} | {n['SRC']}</b><br>{n['TITLE']}<br><a href='{n['LINK']}' target='_blank'>Read More →</a></div>"
-            html+="</div>"
-            st.markdown(html,unsafe_allow_html=True)
-        idx+=1
