@@ -19,7 +19,6 @@ from streamlit_autorefresh import st_autorefresh
 st.set_page_config(page_title="TradingPro SAME DESIGN + Auto 5min", layout="wide")
 IST = pytz.timezone('Asia/Kolkata')
 
-# FIXED 5 MIN SLOT
 now_ist = datetime.now(IST)
 slot_min = (math.floor(now_ist.minute / 5) + 1) * 5
 nh, nm = now_ist.hour, slot_min
@@ -59,8 +58,11 @@ today_str = str(date.today())
 if 'booster_date' not in st.session_state or st.session_state['booster_date']!= today_str:
     st.session_state['booster_date'] = today_str
     st.session_state['booster_locked'] = {}
+if 'rev_date' not in st.session_state or st.session_state['rev_date']!= today_str:
+    st.session_state['rev_date'] = today_str
+    st.session_state['rev_locked'] = {}
 
-def draw_half_chart(symbol, pct_info=""):
+def draw_half_chart(symbol, pct_info="", ref_level=None):
     try:
         today_ist = datetime.now(IST).date()
         df = pd.DataFrame()
@@ -96,6 +98,9 @@ def draw_half_chart(symbol, pct_info=""):
             if bh < (h-l)*0.08: bh=(h-l)*0.08
             if bh==0: bh=(h-l)*0.1 if h!=l else 0.1
             ax.add_patch(Rectangle((x-FIXED/2,min(o,c)),FIXED,bh,facecolor=col,edgecolor=col,linewidth=0))
+        if ref_level is not None:
+            ax.axhline(y=ref_level, color='red', linewidth=2, linestyle='--', alpha=0.95)
+            ax.text(0.01, 0.98, f'Breakout: {ref_level:.2f}', transform=ax.transAxes, color='white', backgroundcolor='red', fontsize=11, fontweight='bold', va='top', ha='left', bbox=dict(boxstyle="round,pad=0.3", fc="red", ec="red"))
         ms=IST.localize(datetime.combine(today_ist, datetime.min.time().replace(hour=9, minute=15)))
         me=IST.localize(datetime.combine(today_ist, datetime.min.time().replace(hour=15, minute=30)))
         ax.set_xlim(mdates.date2num(ms),mdates.date2num(me))
@@ -110,26 +115,23 @@ def draw_half_chart(symbol, pct_info=""):
 
 def scan_fno():
     up,down=[],[]
-    bar=st.progress(0,text="Scanning FNO TOP 20...")
+    bar=st.progress(0,text="Scanning FNO TOP 10...")
     for i,sym in enumerate(FNO):
         try:
             d=yf.Ticker(f"{sym}.NS").history(period="5d",auto_adjust=True)
             if d.empty: continue
             o=float(d['Open'].iloc[-1]); c=float(d['Close'].iloc[-1])
-            dl=float(d['Low'].iloc[-1]); dh=float(d['High'].iloc[-1])
-            if dl==0 or dh==0: continue
-            lu=(c-dl)/dl*100; hd=(dh-c)/dh*100
-            if lu>=1: up.append({"SYM":sym,"OPEN":round(o,2),"DAY_LOW":round(dl,2),"LTP":round(c,2),"LOW_UP %":round(lu,2)})
-            if hd>=1: down.append({"SYM":sym,"OPEN":round(o,2),"DAY_HIGH":round(dh,2),"LTP":round(c,2),"HIGH_DOWN %":round(hd,2)})
+            bl=min(o,c); bh=max(o,c)
+            if bl==0 or bh==0: continue
+            lu=(c-bl)/bl*100; hd=(bh-c)/bh*100
+            if lu>=1: up.append({"SYM":sym,"OPEN":round(o,2),"BODY_LOW":round(bl,2),"LTP":round(c,2),"LOW_UP %":round(lu,2)})
+            if hd>=1: down.append({"SYM":sym,"OPEN":round(o,2),"BODY_HIGH":round(bh,2),"LTP":round(c,2),"HIGH_DOWN %":round(hd,2)})
         except: pass
         bar.progress((i+1)/len(FNO))
     bar.empty()
-    df_up = pd.DataFrame(up)
-    df_down = pd.DataFrame(down)
-    if not df_up.empty:
-        df_up = df_up.sort_values("LOW_UP %", ascending=False).head(20)
-    if not df_down.empty:
-        df_down = df_down.sort_values("HIGH_DOWN %", ascending=False).head(20)
+    df_up=pd.DataFrame(up); df_down=pd.DataFrame(down)
+    if not df_up.empty: df_up=df_up.sort_values("LOW_UP %",ascending=False).head(10)
+    if not df_down.empty: df_down=df_down.sort_values("HIGH_DOWN %",ascending=False).head(10)
     return df_up, df_down
 
 def scan_booster_fno():
@@ -162,6 +164,62 @@ def scan_booster_fno():
     bar.empty()
     return cards
 
+def check_long_3red(df):
+    if len(df) < 6: return None
+    cnt=0; idx=len(df)-2
+    while idx>=0 and df.iloc[idx]['Close'] < df.iloc[idx]['Open']:
+        cnt+=1; idx-=1
+    if cnt<3 or idx<0: return None
+    gc=df.iloc[idx]
+    if not (gc['Close']>gc['Open']): return None
+    ref_low=float(gc['Low']); curr_close=float(df.iloc[-1]['Close'])
+    if curr_close>ref_low: return {"REF":ref_low,"LTP":curr_close,"RED_COUNT":cnt}
+    return None
+
+def check_short_3green(df):
+    if len(df) < 6: return None
+    cnt=0; idx=len(df)-2
+    while idx>=0 and df.iloc[idx]['Close'] > df.iloc[idx]['Open']:
+        cnt+=1; idx-=1
+    if cnt<3 or idx<0: return None
+    rc=df.iloc[idx]
+    if not (rc['Close']<rc['Open']): return None
+    ref_open=float(rc['Open']); curr_close=float(df.iloc[-1]['Close'])
+    if curr_close<ref_open: return {"REF":ref_open,"LTP":curr_close,"GREEN_COUNT":cnt}
+    return None
+
+def scan_reversal_3_4():
+    longs, shorts = [], []
+    bar = st.progress(0, text="Reversal 3+ Scanning...")
+    for i, sym in enumerate(FNO):
+        try:
+            df = yf.Ticker(f"{sym}.NS").history(period="2d", interval="5m", auto_adjust=True)
+            if df.empty or len(df) < 20: bar.progress((i+1)/len(FNO)); continue
+            if df.index.tz is not None: df.index = df.index.tz_convert(IST)
+            last_day = df.index[-1].date()
+            day_df = df[df.index.date == last_day]
+            if len(day_df) < 10: bar.progress((i+1)/len(FNO)); continue
+            l = check_long_3red(day_df)
+            if l: longs.append({"SYM":sym,"LTP":round(l["LTP"],2),"REF_LOW":round(l["REF"],2),"REDS":l["RED_COUNT"],"TYPE":"Long"})
+            s = check_short_3green(day_df)
+            if s: shorts.append({"SYM":sym,"LTP":round(s["LTP"],2),"REF_OPEN":round(s["REF"],2),"GREENS":s["GREEN_COUNT"],"TYPE":"Short"})
+        except: pass
+        bar.progress((i+1)/len(FNO))
+    bar.empty()
+    return pd.DataFrame(longs), pd.DataFrame(shorts)
+
+def do_reversal_scan_lock():
+    fresh_l, fresh_s = scan_reversal_3_4()
+    locked = st.session_state['rev_locked']
+    cur_t = datetime.now(IST).strftime("%H:%M")
+    for _, r in fresh_l.iterrows():
+        if r['SYM'] not in locked:
+            d=r.to_dict(); d['SCANNER_TIME']=cur_t; locked[r['SYM']]=d
+    for _, r in fresh_s.iterrows():
+        if r['SYM'] not in locked:
+            d=r.to_dict(); d['SCANNER_TIME']=cur_t; locked[r['SYM']]=d
+    st.session_state['rev_locked']=locked
+
 @st.cache_data(ttl=90)
 def fetch_news():
     all_news={}
@@ -179,154 +237,105 @@ def fetch_news():
 
 with st.sidebar:
     st.markdown("## TradingPro SAME DESIGN")
-    menu=st.radio("Navigation",["FNO Scanner - 1%","Sector Heatmap - SAME DESIGN","Booster Scanner - FNO Only","NEWS - 87 Sources"],label_visibility="collapsed")
+    menu=st.radio("Navigation",["FNO Scanner - 1%","Sector Heatmap - SAME DESIGN","Booster Scanner - FNO Only","Reversal 3-4 Scanner","NEWS - 87 Sources"],label_visibility="collapsed")
     st.caption(f"{datetime.now(IST).strftime('%d %b %Y %I:%M %p')} IST")
     st.info(f"Abhi: {now_ist.strftime('%H:%M:%S')} Agla auto: {next_slot.strftime('%H:%M')}")
+    if st.button("Reversal Reset"):
+        st.session_state['rev_locked']={}; st.rerun()
 
 if menu=="FNO Scanner - 1%":
-    st.title("FNO DAY LOW/HIGH - TOP 20")
-    auto_fno=st.checkbox("Auto Scan har 5 minute me (FIX 9:15,9:20,9:25)",value=False,key="auto_fno")
-    if auto_fno:
-        st_autorefresh(interval=ms_to_next,key="fno_autorefresh_fix")
-        df_u,df_d=scan_fno()
-        st.session_state['df_u']=df_u; st.session_state['df_d']=df_d
-        st.caption(f"Last Auto Scan: {now_ist.strftime('%H:%M:%S')} | Agla: {next_slot.strftime('%H:%M')}")
+    st.title("FNO BODY - TOP 10 LOW/HIGH 1%")
     if st.button("SCAN NOW",type="primary",use_container_width=True):
-        df_u,df_d=scan_fno()
-        st.session_state['df_u']=df_u; st.session_state['df_d']=df_d
+        df_u,df_d=scan_fno(); st.session_state['df_u']=df_u; st.session_state['df_d']=df_d
     if 'df_u' in st.session_state:
         df_u=st.session_state['df_u']; df_d=st.session_state['df_d']
         c1,c2=st.columns(2)
-        with c1:
-            st.markdown(f"### DAY LOW se UP - TOP 20: {len(df_u)}")
-            st.dataframe(df_u.sort_values("LOW_UP %",ascending=False),use_container_width=True)
-        with c2:
-            st.markdown(f"### DAY HIGH se DOWN - TOP 20: {len(df_d)}")
-            st.dataframe(df_d.sort_values("HIGH_DOWN %",ascending=False),use_container_width=True)
-        up_syms=df_u.sort_values("LOW_UP %",ascending=False)['SYM'].tolist() if not df_u.empty else []
-        down_syms=df_d.sort_values("HIGH_DOWN %",ascending=False)['SYM'].tolist() if not df_d.empty else []
-        max_len=max(len(up_syms),len(down_syms))
-        for i in range(max_len):
-            cl,cr=st.columns(2)
-            if i < len(up_syms):
-                sym=up_syms[i]; pct=df_u[df_u['SYM']==sym]['LOW_UP %'].values[0]
-                with cl:
-                    st.markdown(f"**{sym} DAY LOW +{pct}%**")
-                    draw_half_chart(sym,f"DAY LOW +{pct}%")
-            if i < len(down_syms):
-                sym=down_syms[i]; pct=df_d[df_d['SYM']==sym]['HIGH_DOWN %'].values[0]
-                with cr:
-                    st.markdown(f"**{sym} DAY HIGH -{pct}%**")
-                    draw_half_chart(sym,f"DAY HIGH -{pct}%")
+        with c1: st.markdown(f"### BODY LOW se UP - TOP 10: {len(df_u)}"); st.dataframe(df_u,use_container_width=True)
+        with c2: st.markdown(f"### BODY HIGH se DOWN - TOP 10: {len(df_d)}"); st.dataframe(df_d,use_container_width=True)
 
 elif menu=="Sector Heatmap - SAME DESIGN":
     st.markdown("### NSE INDIA — STOCK MARKET HEATMAP")
-    st.caption(f"NSE • {datetime.now(IST).strftime('%d %b %Y • %H:%M IST')} • Day Change (%) • Treemap by Sector • Colours: Green = Gain (#00CB53) • Red = Loss (#D50000) • LTP = Last Traded Price")
     if st.button("GENERATE SAME DESIGN",type="primary",use_container_width=True):
         heat_data=[]; bar=st.progress(0)
         for i,sym in enumerate(FNO):
             try:
                 d=yf.Ticker(f"{sym}.NS").history(period="5d",auto_adjust=True)
                 if len(d)<2: continue
-                c=float(d['Close'].iloc[-1]); prev=float(d['Close'].iloc[-2])
-                ch=(c-prev)/prev*100
-                heat_data.append({"SYM":sym,"SECTOR":SECTOR_MAP_FULL.get(sym,"Others"),"CHANGE":round(ch,2),"LTP":round(c,2),"SIZE":1})
+                c=float(d['Close'].iloc[-1]); prev=float(d['Close'].iloc[-2]); ch=(c-prev)/prev*100
+                heat_data.append({"SYM":sym,"SECTOR":SECTOR_MAP_FULL.get(sym,"Others"),"CHANGE":round(ch,2),"LTP":round(c,2)})
             except: continue
             bar.progress((i+1)/len(FNO))
-        bar.empty()
-        st.session_state['df_h']=pd.DataFrame(heat_data)
+        bar.empty(); st.session_state['df_h']=pd.DataFrame(heat_data)
     if 'df_h' in st.session_state and not st.session_state['df_h'].empty:
         df_h=st.session_state['df_h']
         sec_perf=df_h.groupby('SECTOR')['CHANGE'].mean().reset_index().sort_values('CHANGE',ascending=False)
         sec_perf['LABEL']=sec_perf['CHANGE'].apply(lambda x: f"{'+' if x>=0 else ''}{x:.2f}%")
         sec_perf['COLOR']=sec_perf['CHANGE'].apply(lambda x: '#00CB53' if x>=0 else '#D50000')
         fig=px.bar(sec_perf,x='SECTOR',y='CHANGE',text='LABEL',color='COLOR',color_discrete_map={'#00CB53':'#00CB53','#D50000':'#D50000'})
-        fig.update_traces(textposition='outside',textfont=dict(size=13,color='white',family='Arial Black'),marker_line_width=0)
-        fig.update_layout(plot_bgcolor='#0e121b',paper_bgcolor='#0e121b',font=dict(color='white'),showlegend=False,height=450,margin=dict(t=30,b=30),yaxis=dict(gridcolor='#1e2a3e',title='Change (%)'),xaxis=dict(title=''))
+        fig.update_layout(plot_bgcolor='#0e121b',paper_bgcolor='#0e121b',font=dict(color='white'),showlegend=False,height=450)
         fig.add_hline(y=0,line_color='white',line_width=1)
-        st.markdown("**Sector Performance - Bar pe click karo -> us sector ke stocks niche ayenge**")
-        clicked=plotly_events(fig,click_event=True,hover_event=False,key="bar_same")
-        selected_sector=None
-        if clicked:
-            selected_sector=clicked[0].get('x')
-            st.success(f"Selected Sector: {selected_sector}")
-        st.divider()
-        df_show=df_h.copy()
-        if selected_sector: df_show=df_show[df_show['SECTOR']==selected_sector]
-        for sec in sorted(df_show['SECTOR'].unique()):
-            sec_df=df_show[df_show['SECTOR']==sec].sort_values('CHANGE',ascending=False)
-            avg=sec_df['CHANGE'].mean()
-            st.markdown(f"<div class='sector-header'>🏦 {sec} &nbsp; • &nbsp; {len(sec_df)} Stocks • Avg {'+' if avg>=0 else ''}{avg:.1f}%</div>",unsafe_allow_html=True)
-            cols=st.columns(5)
-            for idx,(_,row) in enumerate(sec_df.iterrows()):
-                col=cols[idx % 5]
-                bg='#00CB53' if row['CHANGE']>=0 else '#D50000'
-                arrow='↑' if row['CHANGE']>=0 else '↓'
-                with col:
-                    st.markdown(f"<div class='sector-box' style='background:{bg}'>{row['SYM']}<br>{'+' if row['CHANGE']>=0 else ''}{row['CHANGE']}% {arrow}<br>₹{row['LTP']:,.0f}</div>",unsafe_allow_html=True)
-        st.divider()
-        if selected_sector:
-            st.markdown(f"### {selected_sector} - All Stocks")
-            st.dataframe(df_h[df_h['SECTOR']==selected_sector].sort_values('CHANGE',ascending=False),use_container_width=True)
-        else:
-            st.markdown("### All Sectors - Avg Performance")
-            st.dataframe(sec_perf[['SECTOR','CHANGE']].sort_values('CHANGE',ascending=False),use_container_width=True)
+        st.plotly_chart(fig,use_container_width=True)
 
 elif menu=="Booster Scanner - FNO Only":
     st.title("Booster BODY - LONG vs SHORT + CHART")
-    st.caption(f"Scanner Time Lock ON | Date: {today_str} | Jo scanner me pehle aaya wo pehle")
-    auto_boost=st.checkbox("Auto Scan har 5 minute me (FIX 9:15,9:20,9:25)",value=False,key="auto_boost")
-    def do_booster_scan():
-        fresh=scan_booster_fno()
-        locked=st.session_state['booster_locked']
-        cur_t=datetime.now(IST).strftime("%H:%M")
-        for c in fresh:
-            sym=c['SYM']
-            if sym not in locked:
-                c['SCANNER_TIME']=cur_t
-                locked[sym]=c
-        st.session_state['booster_locked']=locked
-    if auto_boost:
-        st_autorefresh(interval=ms_to_next,key="boost_autorefresh_fix")
-        do_booster_scan()
-        st.caption(f"Last Scan: {now_ist.strftime('%H:%M:%S')} | Agla: {next_slot.strftime('%H:%M')}")
     if st.button("SCAN BOOSTER - FNO BODY",type="primary",use_container_width=True):
-        do_booster_scan()
-    if st.sidebar.button("Booster Reset"):
-        st.session_state['booster_locked']={}; st.rerun()
+        fresh=scan_booster_fno(); locked=st.session_state['booster_locked']; cur_t=datetime.now(IST).strftime("%H:%M")
+        for c in fresh:
+            if c['SYM'] not in locked: c['SCANNER_TIME']=cur_t; locked[c['SYM']]=c
     cards=list(st.session_state['booster_locked'].values())
     if cards:
-        def sort_key(c):
-            try: h,m=map(int,str(c.get('SCANNER_TIME','15:30')).strip().split(':')); return h*60+m
-            except: return 9999
-        cards_sorted=sorted(cards,key=sort_key)
-        long_cards=[x for x in cards_sorted if "Long" in x['TYPE']]
-        short_cards=[x for x in cards_sorted if "Short" in x['TYPE']]
-        st.success(f"Total: {len(cards_sorted)} | LONG: {len(long_cards)} | SHORT: {len(short_cards)}")
+        long_cards=[x for x in cards if "Long" in x['TYPE']]; short_cards=[x for x in cards if "Short" in x['TYPE']]
+        st.success(f"Total: {len(cards)} | LONG: {len(long_cards)} | SHORT: {len(short_cards)}")
         cL,cS=st.columns(2)
         with cL:
-            st.markdown(f"### LONG BODY - {len(long_cards)}")
             for c in long_cards:
-                st.markdown(f"<div style='background:white;color:black;padding:12px;border-radius:12px;margin:8px 0;border-left:6px solid #00c853'><b>{c['SYM']} LONG ⏰ {c.get('SCANNER_TIME','--:--')}</b><br>LTP {c['LTP']:.2f} ENTRY {c['ENTRY']:.2f} SL {c['SL']:.2f} T2 {c['T2']:.2f} RANGE {c['RANGE']:.2f}%</div>",unsafe_allow_html=True)
-                draw_half_chart(c['SYM'],f"SCANNER {c.get('SCANNER_TIME','')} {c['TYPE']} RANGE {c['RANGE']:.2f}%")
+                st.markdown(f"**{c['SYM']} LONG ⏰ {c.get('SCANNER_TIME','--:--')}**")
+                draw_half_chart(c['SYM'],f"{c['TYPE']}",ref_level=c['ENTRY'])
         with cS:
-            st.markdown(f"### SHORT BODY - {len(short_cards)}")
             for c in short_cards:
-                st.markdown(f"<div style='background:white;color:black;padding:12px;border-radius:12px;margin:8px 0;border-left:6px solid #d50000'><b>{c['SYM']} SHORT ⏰ {c.get('SCANNER_TIME','--:--')}</b><br>LTP {c['LTP']:.2f} ENTRY {c['ENTRY']:.2f} SL {c['SL']:.2f} T2 {c['T2']:.2f} RANGE {c['RANGE']:.2f}%</div>",unsafe_allow_html=True)
-                draw_half_chart(c['SYM'],f"SCANNER {c.get('SCANNER_TIME','')} {c['TYPE']} RANGE {c['RANGE']:.2f}%")
+                st.markdown(f"**{c['SYM']} SHORT ⏰ {c.get('SCANNER_TIME','--:--')}**")
+                draw_half_chart(c['SYM'],f"{c['TYPE']}",ref_level=c['ENTRY'])
+
+elif menu=="Reversal 3-4 Scanner":
+    st.title("Reversal - 3+ Red/Green LOCK + Red Line")
+    st.caption(f"Lock ON | Date: {today_str}")
+    auto_rev=st.checkbox("Auto Scan har 5 minute me",value=False,key="auto_rev")
+    if auto_rev:
+        st_autorefresh(interval=ms_to_next,key="rev_autorefresh_fix")
+        do_reversal_scan_lock()
+    if st.button("SCAN REVERSAL",type="primary",use_container_width=True):
+        do_reversal_scan_lock()
+    locked=list(st.session_state['rev_locked'].values())
+    if locked:
+        def sk(c):
+            try: h,m=map(int,str(c.get('SCANNER_TIME','15:30')).split(':')); return h*60+m
+            except: return 9999
+        locked=sorted(locked,key=sk)
+        long_c=[x for x in locked if x['TYPE']=="Long"]; short_c=[x for x in locked if x['TYPE']=="Short"]
+        st.success(f"Total LOCKED: {len(locked)} | LONG: {len(long_c)} | SHORT: {len(short_c)}")
+        c1,c2=st.columns(2)
+        with c1:
+            st.markdown(f"### LONG LOCKED - {len(long_c)}")
+            for r in long_c:
+                st.markdown(f"<div style='background:white;color:black;padding:12px;border-radius:12px;margin:8px 0;border-left:6px solid #00c853'><b>{r['SYM']} LONG ⏰ {r.get('SCANNER_TIME','--:--')} ({r.get('REDS','?')} red)</b><br>LTP {r['LTP']} REF_LOW {r['REF_LOW']}</div>",unsafe_allow_html=True)
+                draw_half_chart(r['SYM'], f"LONG {r.get('SCANNER_TIME','')} Breakout {r['REF_LOW']}", ref_level=r['REF_LOW'])
+        with c2:
+            st.markdown(f"### SHORT LOCKED - {len(short_c)}")
+            for r in short_c:
+                st.markdown(f"<div style='background:white;color:black;padding:12px;border-radius:12px;margin:8px 0;border-left:6px solid #d50000'><b>{r['SYM']} SHORT ⏰ {r.get('SCANNER_TIME','--:--')} ({r.get('GREENS','?')} green)</b><br>LTP {r['LTP']} REF_OPEN {r['REF_OPEN']}</div>",unsafe_allow_html=True)
+                draw_half_chart(r['SYM'], f"SHORT {r.get('SCANNER_TIME','')} Breakdown {r['REF_OPEN']}", ref_level=r['REF_OPEN'])
     else:
-        st.info("Abhi booster khali hai. SCAN dabao - jo ayega wo din bhar lock rahega.")
+        st.info("Abhi khali hai. SCAN dabao.")
 
 elif menu=="NEWS - 87 Sources":
-    st.title("LIVE NEWS - 87 Sources - 3 Column Black + Scroll")
+    st.title("LIVE NEWS - 87 Sources")
     if st.button("REFRESH NEWS",type="primary"):
         st.cache_data.clear(); st.rerun()
     news_data=fetch_news()
-    c1,c2,c3=st.columns(3)
-    cols=[c1,c2,c3]; idx=0
+    c1,c2,c3=st.columns(3); cols=[c1,c2,c3]; idx=0
     for cat,lst in news_data.items():
         with cols[idx%3]:
-            html=f"<div class='news-wrapper'><div class='news-header'>{cat} - {datetime.now(IST).strftime('%H:%M:%S')}</div>"
+            html=f"<div class='news-wrapper'><div class='news-header'>{cat}</div>"
             for n in lst[:15]:
                 html+=f"<div class='news-card-black'><b>{n['TIME']} | {n['SRC']}</b><br>{n['TITLE']}<br><a href='{n['LINK']}' target='_blank'>Read More →</a></div>"
             html+="</div>"
