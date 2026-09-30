@@ -110,7 +110,7 @@ def draw_half_chart(symbol, pct_info=""):
 
 def scan_fno():
     up,down=[],[]
-    bar=st.progress(0,text="Scanning FNO TOP 10...")
+    bar=st.progress(0,text="Scanning FNO TOP 20...")
     for i,sym in enumerate(FNO):
         try:
             d=yf.Ticker(f"{sym}.NS").history(period="5d",auto_adjust=True)
@@ -127,9 +127,9 @@ def scan_fno():
     df_up = pd.DataFrame(up)
     df_down = pd.DataFrame(down)
     if not df_up.empty:
-        df_up = df_up.sort_values("LOW_UP %", ascending=False).head(10)
+        df_up = df_up.sort_values("LOW_UP %", ascending=False).head(20)
     if not df_down.empty:
-        df_down = df_down.sort_values("HIGH_DOWN %", ascending=False).head(10)
+        df_down = df_down.sort_values("HIGH_DOWN %", ascending=False).head(20)
     return df_up, df_down
 
 def scan_booster_fno():
@@ -184,7 +184,7 @@ with st.sidebar:
     st.info(f"Abhi: {now_ist.strftime('%H:%M:%S')} Agla auto: {next_slot.strftime('%H:%M')}")
 
 if menu=="FNO Scanner - 1%":
-    st.title("FNO DAY LOW/HIGH - TOP 10")
+    st.title("FNO DAY LOW/HIGH - TOP 20")
     auto_fno=st.checkbox("Auto Scan har 5 minute me (FIX 9:15,9:20,9:25)",value=False,key="auto_fno")
     if auto_fno:
         st_autorefresh(interval=ms_to_next,key="fno_autorefresh_fix")
@@ -198,10 +198,10 @@ if menu=="FNO Scanner - 1%":
         df_u=st.session_state['df_u']; df_d=st.session_state['df_d']
         c1,c2=st.columns(2)
         with c1:
-            st.markdown(f"### DAY LOW se UP - TOP 10: {len(df_u)}")
+            st.markdown(f"### DAY LOW se UP - TOP 20: {len(df_u)}")
             st.dataframe(df_u.sort_values("LOW_UP %",ascending=False),use_container_width=True)
         with c2:
-            st.markdown(f"### DAY HIGH se DOWN - TOP 10: {len(df_d)}")
+            st.markdown(f"### DAY HIGH se DOWN - TOP 20: {len(df_d)}")
             st.dataframe(df_d.sort_values("HIGH_DOWN %",ascending=False),use_container_width=True)
         up_syms=df_u.sort_values("LOW_UP %",ascending=False)['SYM'].tolist() if not df_u.empty else []
         down_syms=df_d.sort_values("HIGH_DOWN %",ascending=False)['SYM'].tolist() if not df_d.empty else []
