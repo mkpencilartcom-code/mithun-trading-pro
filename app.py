@@ -116,17 +116,16 @@ def scan_fno():
             d=yf.Ticker(f"{sym}.NS").history(period="5d",auto_adjust=True)
             if d.empty: continue
             o=float(d['Open'].iloc[-1]); c=float(d['Close'].iloc[-1])
-            bl=min(o,c); bh=max(o,c)
-            if bl==0 or bh==0: continue
-            lu=(c-bl)/bl*100; hd=(bh-c)/bh*100
-            if lu>=1: up.append({"SYM":sym,"OPEN":round(o,2),"BODY_LOW":round(bl,2),"LTP":round(c,2),"LOW_UP %":round(lu,2)})
-            if hd>=1: down.append({"SYM":sym,"OPEN":round(o,2),"BODY_HIGH":round(bh,2),"LTP":round(c,2),"HIGH_DOWN %":round(hd,2)})
+            dl=float(d['Low'].iloc[-1]); dh=float(d['High'].iloc[-1])
+            if dl==0 or dh==0: continue
+            lu=(c-dl)/dl*100; hd=(dh-c)/dh*100
+            if lu>=1: up.append({"SYM":sym,"OPEN":round(o,2),"DAY_LOW":round(dl,2),"LTP":round(c,2),"LOW_UP %":round(lu,2)})
+            if hd>=1: down.append({"SYM":sym,"OPEN":round(o,2),"DAY_HIGH":round(dh,2),"LTP":round(c,2),"HIGH_DOWN %":round(hd,2)})
         except: pass
         bar.progress((i+1)/len(FNO))
     bar.empty()
     df_up = pd.DataFrame(up)
     df_down = pd.DataFrame(down)
-    # TOP 10 ONLY
     if not df_up.empty:
         df_up = df_up.sort_values("LOW_UP %", ascending=False).head(10)
     if not df_down.empty:
@@ -185,7 +184,7 @@ with st.sidebar:
     st.info(f"Abhi: {now_ist.strftime('%H:%M:%S')} Agla auto: {next_slot.strftime('%H:%M')}")
 
 if menu=="FNO Scanner - 1%":
-    st.title("FNO BODY - TOP 10 LOW/HIGH 1%")
+    st.title("FNO DAY LOW/HIGH - TOP 10")
     auto_fno=st.checkbox("Auto Scan har 5 minute me (FIX 9:15,9:20,9:25)",value=False,key="auto_fno")
     if auto_fno:
         st_autorefresh(interval=ms_to_next,key="fno_autorefresh_fix")
@@ -199,10 +198,10 @@ if menu=="FNO Scanner - 1%":
         df_u=st.session_state['df_u']; df_d=st.session_state['df_d']
         c1,c2=st.columns(2)
         with c1:
-            st.markdown(f"### BODY LOW se UP - TOP 10: {len(df_u)}")
+            st.markdown(f"### DAY LOW se UP - TOP 10: {len(df_u)}")
             st.dataframe(df_u.sort_values("LOW_UP %",ascending=False),use_container_width=True)
         with c2:
-            st.markdown(f"### BODY HIGH se DOWN - TOP 10: {len(df_d)}")
+            st.markdown(f"### DAY HIGH se DOWN - TOP 10: {len(df_d)}")
             st.dataframe(df_d.sort_values("HIGH_DOWN %",ascending=False),use_container_width=True)
         up_syms=df_u.sort_values("LOW_UP %",ascending=False)['SYM'].tolist() if not df_u.empty else []
         down_syms=df_d.sort_values("HIGH_DOWN %",ascending=False)['SYM'].tolist() if not df_d.empty else []
@@ -212,13 +211,13 @@ if menu=="FNO Scanner - 1%":
             if i < len(up_syms):
                 sym=up_syms[i]; pct=df_u[df_u['SYM']==sym]['LOW_UP %'].values[0]
                 with cl:
-                    st.markdown(f"**{sym} BODY LOW +{pct}%**")
-                    draw_half_chart(sym,f"BODY LOW +{pct}%")
+                    st.markdown(f"**{sym} DAY LOW +{pct}%**")
+                    draw_half_chart(sym,f"DAY LOW +{pct}%")
             if i < len(down_syms):
                 sym=down_syms[i]; pct=df_d[df_d['SYM']==sym]['HIGH_DOWN %'].values[0]
                 with cr:
-                    st.markdown(f"**{sym} BODY HIGH -{pct}%**")
-                    draw_half_chart(sym,f"BODY HIGH -{pct}%")
+                    st.markdown(f"**{sym} DAY HIGH -{pct}%**")
+                    draw_half_chart(sym,f"DAY HIGH -{pct}%")
 
 elif menu=="Sector Heatmap - SAME DESIGN":
     st.markdown("### NSE INDIA — STOCK MARKET HEATMAP")
