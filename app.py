@@ -166,26 +166,30 @@ def scan_booster_fno():
 
 def check_long_3red(df):
     if len(df) < 6: return None
+    curr_close = float(df.iloc[-1]['Close'])
     cnt=0; idx=len(df)-2
     while idx>=0 and df.iloc[idx]['Close'] < df.iloc[idx]['Open']:
         cnt+=1; idx-=1
     if cnt<3 or idx<0: return None
-    gc=df.iloc[idx]
-    if not (gc['Close']>gc['Open']): return None
-    ref_low=float(gc['Low']); curr_close=float(df.iloc[-1]['Close'])
-    if curr_close>ref_low: return {"REF":ref_low,"LTP":curr_close,"RED_COUNT":cnt}
+    green=df.iloc[idx]
+    if not (green['Close']>green['Open']): return None
+    body_high=float(max(green['Open'],green['Close']))
+    if curr_close>body_high:
+        return {"REF":body_high,"LTP":curr_close,"RED_COUNT":cnt}
     return None
 
 def check_short_3green(df):
     if len(df) < 6: return None
+    curr_close=float(df.iloc[-1]['Close'])
     cnt=0; idx=len(df)-2
     while idx>=0 and df.iloc[idx]['Close'] > df.iloc[idx]['Open']:
         cnt+=1; idx-=1
     if cnt<3 or idx<0: return None
-    rc=df.iloc[idx]
-    if not (rc['Close']<rc['Open']): return None
-    ref_open=float(rc['Open']); curr_close=float(df.iloc[-1]['Close'])
-    if curr_close<ref_open: return {"REF":ref_open,"LTP":curr_close,"GREEN_COUNT":cnt}
+    red=df.iloc[idx]
+    if not (red['Close']<red['Open']): return None
+    body_low=float(min(red['Open'],red['Close']))
+    if curr_close<body_low:
+        return {"REF":body_low,"LTP":curr_close,"GREEN_COUNT":cnt}
     return None
 
 def scan_reversal_3_4():
